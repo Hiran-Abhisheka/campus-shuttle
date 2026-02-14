@@ -8,6 +8,7 @@ import StudentDashboard from './pages/StudentDashboard'
 import StudentProfile from './pages/StudentProfile'
 import ShuttleBooking from './pages/ShuttleBooking'
 import DriverDashboard from './pages/DriverDashboard'
+import DriverProfile from './pages/DriverProfile'
 import AdminDashboard from './pages/AdminDashboard'
 import './styles/animations.css' // Import animations
 
@@ -54,6 +55,11 @@ export default function App() {
         <Route path="/driver-dashboard" element={
           <Layout>
             <DriverDashboard />
+          </Layout>
+        } />
+        <Route path="/driver-profile" element={
+          <Layout>
+            <DriverProfile />
           </Layout>
         } />
         <Route path="/admin-dashboard" element={
