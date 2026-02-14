@@ -31,9 +31,14 @@ const Navbar = () => {
 
   useEffect(() => {
     const studentLoggedIn = localStorage.getItem('studentLoggedIn');
+    const riderLoggedIn = localStorage.getItem('riderLoggedIn');
+    
     if (studentLoggedIn === 'true') {
       setIsLoggedIn(true);
       setUserType('student');
+    } else if (riderLoggedIn === 'true') {
+      setIsLoggedIn(true);
+      setUserType('rider');
     }
   }, [location.pathname]);
 
@@ -117,6 +122,15 @@ const Navbar = () => {
                   <i className="fas fa-user-circle"></i> Profile
                 </Link>
               </>
+            ) : (isLoggedIn && userType === 'rider') && (location.pathname === '/driver-dashboard' || location.pathname === '/contact') ? (
+              <>
+                <Link to="/driver-dashboard" className="nav-link" onClick={closeMobileMenu}>Dashboard</Link>
+                <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
+                <a href="#message" className="nav-link" onClick={closeMobileMenu}>Message</a>
+                <Link to="/driver-profile" className="nav-button" onClick={closeMobileMenu}>
+                  <i className="fas fa-user-circle"></i> Profile
+                </Link>
+              </>
             ) : (
               <>
                 <a href="#home" className="nav-link" onClick={closeMobileMenu}>Home</a>
@@ -179,7 +193,14 @@ const Navbar = () => {
                 <h2 className="modal-title">Rider Login</h2>
                 <p className="modal-subtitle">Sign in to your rider account</p>
 
-                <form className="login-form">
+                <form className="login-form" onSubmit={(e) => {
+                  e.preventDefault();
+                  localStorage.setItem('riderLoggedIn', 'true');
+                  setIsLoggedIn(true);
+                  setUserType('rider');
+                  closeModal();
+                  navigate('/driver-dashboard');
+                }}>
                   <div className="form-group">
                     <label htmlFor="rider-username">
                       <i className="fas fa-user-circle"></i>
@@ -236,6 +257,7 @@ const Navbar = () => {
 
                 <form className="login-form" onSubmit={(e) => {
                   e.preventDefault();
+                  localStorage.setItem('studentLoggedIn', 'true');
                   setIsLoggedIn(true);
                   setUserType('student');
                   closeModal();

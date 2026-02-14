@@ -7,6 +7,7 @@ import Contact from './components/Contact'
 import StudentDashboard from './pages/StudentDashboard'
 import StudentProfile from './pages/StudentProfile'
 import ShuttleBooking from './pages/ShuttleBooking'
+import DriverDashboard from './pages/DriverDashboard'
 import './styles/animations.css' // Import animations
 
 // Scroll to top component
@@ -47,6 +48,11 @@ export default function App() {
         <Route path="/shuttle-booking" element={
           <Layout>
             <ShuttleBooking />
+          </Layout>
+        } />
+        <Route path="/driver-dashboard" element={
+          <Layout>
+            <DriverDashboard />
           </Layout>
         } />
         <Route path="/contact" element={
