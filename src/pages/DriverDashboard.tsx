@@ -1,3 +1,5 @@
+/// <reference types="styled-jsx" />
+
 import React, { useState } from 'react';
 
 interface Seat {
