@@ -9,7 +9,7 @@ const Navbar = () => {
   const [loginView, setLoginView] = useState<'select' | 'rider' | 'student'>('select');
   const [signupView, setSignupView] = useState<'select' | 'rider' | 'student'>('select');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userType, setUserType] = useState<'student' | 'rider' | null>(null);
+  const [userType, setUserType] = useState<'student' | 'rider' | 'admin' | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -32,6 +32,7 @@ const Navbar = () => {
   useEffect(() => {
     const studentLoggedIn = localStorage.getItem('studentLoggedIn');
     const riderLoggedIn = localStorage.getItem('riderLoggedIn');
+    const adminLoggedIn = localStorage.getItem('adminLoggedIn');
     
     if (studentLoggedIn === 'true') {
       setIsLoggedIn(true);
@@ -39,6 +40,9 @@ const Navbar = () => {
     } else if (riderLoggedIn === 'true') {
       setIsLoggedIn(true);
       setUserType('rider');
+    } else if (adminLoggedIn === 'true') {
+      setIsLoggedIn(true);
+      setUserType('admin');
     }
   }, [location.pathname]);
 
@@ -66,6 +70,10 @@ const Navbar = () => {
 
   const handleStudentLogin = () => {
     setLoginView('student');
+  };
+
+  const handleAdminLogin = () => {
+    setLoginView('admin');
   };
 
   const goBackToSelect = () => {
@@ -125,10 +133,20 @@ const Navbar = () => {
             ) : (isLoggedIn && userType === 'rider') && (location.pathname === '/driver-dashboard' || location.pathname === '/contact') ? (
               <>
                 <Link to="/driver-dashboard" className="nav-link" onClick={closeMobileMenu}>Dashboard</Link>
+                <Link to="/admin-dashboard" className="nav-link" onClick={closeMobileMenu}>Admin</Link>
                 <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
                 <a href="#message" className="nav-link" onClick={closeMobileMenu}>Message</a>
                 <Link to="/driver-profile" className="nav-button" onClick={closeMobileMenu}>
                   <i className="fas fa-user-circle"></i> Profile
+                </Link>
+              </>
+            ) : (isLoggedIn && userType === 'admin') && (location.pathname === '/admin-dashboard' || location.pathname === '/contact') ? (
+              <>
+                <Link to="/admin-dashboard" className="nav-link" onClick={closeMobileMenu}>Admin Dashboard</Link>
+                <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
+                <a href="#message" className="nav-link" onClick={closeMobileMenu}>Message</a>
+                <Link to="/admin-profile" className="nav-button" onClick={closeMobileMenu}>
+                  <i className="fas fa-user-shield"></i> Admin Profile
                 </Link>
               </>
             ) : (
@@ -178,6 +196,18 @@ const Navbar = () => {
                     <p>Track shuttles and book your rides</p>
                     <button className="option-btn student-btn" onClick={handleStudentLogin}>
                       Continue as Student
+                      <i className="fas fa-arrow-right"></i>
+                    </button>
+                  </div>
+
+                  <div className="login-option">
+                    <div className="login-option-icon admin-icon">
+                      <i className="fas fa-cog"></i>
+                    </div>
+                    <h3>Admin Login</h3>
+                    <p>Manage system, users and monitor operations</p>
+                    <button className="option-btn admin-btn" onClick={handleAdminLogin}>
+                      Continue as Admin
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -308,7 +338,63 @@ const Navbar = () => {
                 </form>
               </>
             )}
-          </div>
+            {loginView === 'admin' && (
+              <>
+                <button className="back-btn" onClick={goBackToSelect}>
+                  <i className="fas fa-arrow-left"></i>
+                </button>
+                <h2 className="modal-title">Admin Login</h2>
+                <p className="modal-subtitle">Sign in to your admin account</p>
+
+                <form className="login-form" onSubmit={(e) => {
+                  e.preventDefault();
+                  localStorage.setItem('adminLoggedIn', 'true');
+                  setIsLoggedIn(true);
+                  setUserType('admin');
+                  closeModal();
+                  navigate('/admin-dashboard');
+                }}>
+                  <div className="form-group">
+                    <label htmlFor="admin-username">
+                      <i className="fas fa-user-shield"></i>
+                      Admin Username
+                    </label>
+                    <input 
+                      type="text" 
+                      id="admin-username" 
+                      placeholder="Enter admin username"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="admin-password">
+                      <i className="fas fa-lock"></i>
+                      Password
+                    </label>
+                    <input 
+                      type="password" 
+                      id="admin-password" 
+                      placeholder="Enter admin password"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-options">
+                    <label className="remember-me">
+                      <input type="checkbox" />
+                      <span>Remember me</span>
+                    </label>
+                    <a href="#" className="forgot-password">Forgot Password?</a>
+                  </div>
+
+                  <button type="submit" className="submit-btn admin-submit">
+                    <i className="fas fa-sign-in-alt"></i>
+                    Login as Admin
+                  </button>
+                </form>
+              </>
+            )}          </div>
         </div>
       )}
 

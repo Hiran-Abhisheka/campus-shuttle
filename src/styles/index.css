@@ -420,6 +420,11 @@ html, body {
   box-shadow: 0 12px 35px rgba(132, 23, 186, 0.35);
 }
 
+.admin-icon {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  box-shadow: 0 12px 35px rgba(255, 107, 53, 0.35);
+}
+
 .login-option:hover .login-option-icon {
   transform: scale(1.15) rotate(10deg);
   box-shadow: 0 15px 45px rgba(132, 23, 186, 0.45);
@@ -496,6 +501,16 @@ html, body {
 .student-btn:hover {
   transform: translateY(-3px);
   box-shadow: 0 15px 35px rgba(132, 23, 186, 0.45);
+}
+
+.admin-btn {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  box-shadow: 0 10px 25px rgba(255, 107, 53, 0.35);
+}
+
+.admin-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(255, 107, 53, 0.45);
 }
 
 .option-btn i {
@@ -682,6 +697,16 @@ html, body {
 .student-submit:hover {
   transform: translateY(-3px);
   box-shadow: 0 15px 35px rgba(132, 23, 186, 0.45);
+}
+
+.admin-submit {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  box-shadow: 0 10px 25px rgba(255, 107, 53, 0.35);
+}
+
+.admin-submit:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(255, 107, 53, 0.45);
 }
 
 .signup-link {
