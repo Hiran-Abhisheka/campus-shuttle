@@ -321,17 +321,12 @@ export default function LandingPage() {
                       <input type="checkbox" />
                       <span>Remember me</span>
                     </label>
-                    <a href="#" className="forgot-password">Forgot Password?</a>
                   </div>
 
                   <button type="submit" className="submit-btn">
                     Login as Admin
                     <i className="fas fa-sign-in-alt"></i>
                   </button>
-
-                  <p className="form-footer">
-                    Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); closeLoginModal(); handleSignupClick(e); }}>Sign up</a>
-                  </p>
                 </form>
               </>
             )}

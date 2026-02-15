@@ -385,17 +385,12 @@ const Navbar = () => {
                       <input type="checkbox" />
                       <span>Remember me</span>
                     </label>
-                    <a href="#" className="forgot-password">Forgot Password?</a>
                   </div>
 
                   <button type="submit" className="submit-btn">
                     <i className="fas fa-sign-in-alt"></i>
                     Login as Admin
                   </button>
-
-                  <p className="form-footer">
-                    Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); switchToSignup(); }}>Sign up</a>
-                  </p>
                 </form>
               </>
             )}          </div>
