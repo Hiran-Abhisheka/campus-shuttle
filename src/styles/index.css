@@ -3974,9 +3974,17 @@ body::-webkit-scrollbar {
   font-size: 0.9rem;
 }
 
-.edit-field-btn:hover {
-  background-color: rgba(132, 23, 186, 0.1);
-  color: #6b3fa0;
+.display-field.readonly {
+  opacity: 0.7;
+  background-color: rgba(132, 23, 186, 0.02);
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(132, 23, 186, 0.1);
+}
+
+.display-field.readonly span {
+  color: #666;
+  font-weight: 500;
 }
 
 .edit-field {

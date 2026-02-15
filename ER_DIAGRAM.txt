@@ -1,0 +1,115 @@
+Campus Shuttle Booking System - Entity Relationship Diagram
+===========================================================
+
+┌─────────────────┐       ┌─────────────────┐
+│     users       │       │   students      │
+│─────────────────│       │─────────────────│
+│ id (PK)         │1    1 │ id (PK)         │
+│ username        │───────│ user_id (FK)    │
+│ email           │       │ full_name       │
+│ password_hash   │       │ mobile          │
+│ role            │       │ university      │
+│ is_active       │       │ home_address    │
+│ created_at      │       │ parent_name     │
+│ updated_at      │       │ parent_email    │
+└─────────────────┘       │ parent_phone    │
+                          │ total_bookings  │
+                          │ join_date       │
+                          └─────────────────┘
+                                 │1
+                                 │
+                                 │
+                                 │
+┌─────────────────┐       ┌─────────────────┐
+│    drivers      │       │ shuttle_routes  │
+│─────────────────│       │─────────────────│
+│ id (PK)         │1    1 │ id (PK)         │
+│ user_id (FK)    │───────│ driver_id (FK)  │
+│ full_name       │       │ bus_number      │
+│ mobile          │       │ start_location  │
+│ license_number  │       │ end_location    │
+│ vehicle_type    │       │ start_time      │
+│ vehicle_number  │       │ end_time        │
+│ seats           │       │ duration        │
+│ total_trips     │       │ stops           │
+│ rating          │       │ total_seats     │
+│ status          │       │ available_seats │
+│ join_date       │       │ price           │
+└─────────────────┘       │ is_active       │
+                          │ created_at      │
+                          └─────────────────┘
+                                 │1
+                                 │
+                                 │
+                                 │
+                          ┌─────────────────┐
+                          │    bookings     │
+                          │─────────────────│
+                          │ id (PK)         │
+                          │ student_id (FK) │
+                          │ shuttle_route_id│
+                          │ selected_seats  │
+                          │ passenger_name  │
+                          │ passenger_email │
+                          │ passenger_phone │
+                          │ total_price     │
+                          │ booking_date    │
+                          │ status          │
+                          └─────────────────┘
+                                 │1
+                                 │
+                                 │
+                                 │
+                          ┌─────────────────┐
+                          │    payments     │
+                          │─────────────────│
+                          │ id (PK)         │
+                          │ booking_id (FK) │
+                          │ amount          │
+                          │ payment_method  │
+                          │ payment_status  │
+                          │ transaction_id  │
+                          │ payment_date    │
+                          └─────────────────┘
+
+┌─────────────────┐       ┌─────────────────┐
+│ emergency_      │       │ route_tracking │
+│   reports       │       │─────────────────│
+│─────────────────│       │ id (PK)         │
+│ id (PK)         │       │ booking_id (FK) │
+│ driver_id (FK)  │       │ current_stop    │
+│ shuttle_route_id│       │ eta             │
+│ emergency_type  │       │ status          │
+│ location        │       │ last_updated    │
+│ description     │       └─────────────────┘
+│ status          │
+│ reported_at     │
+│ resolved_at     │
+└─────────────────┘
+
+Legend:
+═══════
+PK = Primary Key
+FK = Foreign Key
+1 = One-to-One relationship
+1 = One-to-Many relationship (1 can have many)
+
+Key Relationships:
+─────────────────
+• users → students (1:1)
+• users → drivers (1:1)
+• students → bookings (1:many)
+• drivers → shuttle_routes (1:many)
+• shuttle_routes → bookings (1:many)
+• bookings → payments (1:many)
+• drivers → emergency_reports (1:many)
+• shuttle_routes → emergency_reports (1:many)
+• bookings → route_tracking (1:many)
+
+No Cancellation Fields:
+─────────────────────
+• No cancelled_at timestamps
+• No cancellation_reason fields
+• No refund_status or refund_amount
+• Bookings status only: 'confirmed' | 'completed'</content>
+<parameter name="filePath">d:\Shuttle\campus-shuttle\ER_DIAGRAM.txt
