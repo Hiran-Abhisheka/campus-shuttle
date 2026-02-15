@@ -133,9 +133,6 @@ const Footer = () => {
             <h3 className="footer-title">Our Services</h3>
             <ul className="footer-links">
               <li><Link to="/services"><i className="fas fa-chevron-right"></i> Campus Routes</Link></li>
-              <li><Link to="/services"><i className="fas fa-chevron-right"></i> Express Shuttle</Link></li>
-              <li><Link to="/services"><i className="fas fa-chevron-right"></i> Night Service</Link></li>
-              <li><Link to="/services"><i className="fas fa-chevron-right"></i> Event Transportation</Link></li>
               <li><Link to="/services"><i className="fas fa-chevron-right"></i> Accessibility Support</Link></li>
               <li><Link to="/services"><i className="fas fa-chevron-right"></i> Safety Features</Link></li>
             </ul>
