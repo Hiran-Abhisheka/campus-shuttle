@@ -1,110 +1,130 @@
-Campus Shuttle Booking System - Entity Relationship Diagram
-===========================================================
+Campus Shuttle Booking System - Entity Relationship Diagram (Mermaid Format)
+===========================================================================
 
-┌─────────────────┐       ┌─────────────────┐
-│     users       │       │   students      │
-│─────────────────│       │─────────────────│
-│ id (PK)         │1    1 │ id (PK)         │
-│ username        │───────│ user_id (FK)    │
-│ email           │       │ full_name       │
-│ password_hash   │       │ mobile          │
-│ role            │       │ university      │
-│ is_active       │       │ home_address    │
-│ created_at      │       │ parent_name     │
-│ updated_at      │       │ parent_email    │
-└─────────────────┘       │ parent_phone    │
-                          │ total_bookings  │
-                          │ join_date       │
-                          └─────────────────┘
-                                 │1
-                                 │
-                                 │
-                                 │
-┌─────────────────┐       ┌─────────────────┐
-│    drivers      │       │ shuttle_routes  │
-│─────────────────│       │─────────────────│
-│ id (PK)         │1    1 │ id (PK)         │
-│ user_id (FK)    │───────│ driver_id (FK)  │
-│ full_name       │       │ bus_number      │
-│ mobile          │       │ start_location  │
-│ license_number  │       │ end_location    │
-│ vehicle_type    │       │ start_time      │
-│ vehicle_number  │       │ end_time        │
-│ seats           │       │ duration        │
-│ total_trips     │       │ stops           │
-│ rating          │       │ total_seats     │
-│ status          │       │ available_seats │
-│ join_date       │       │ price           │
-└─────────────────┘       │ is_active       │
-                          │ created_at      │
-                          └─────────────────┘
-                                 │1
-                                 │
-                                 │
-                                 │
-                          ┌─────────────────┐
-                          │    bookings     │
-                          │─────────────────│
-                          │ id (PK)         │
-                          │ student_id (FK) │
-                          │ shuttle_route_id│
-                          │ selected_seats  │
-                          │ passenger_name  │
-                          │ passenger_email │
-                          │ passenger_phone │
-                          │ total_price     │
-                          │ booking_date    │
-                          │ status          │
-                          └─────────────────┘
-                                 │1
-                                 │
-                                 │
-                                 │
-                          ┌─────────────────┐
-                          │    payments     │
-                          │─────────────────│
-                          │ id (PK)         │
-                          │ booking_id (FK) │
-                          │ amount          │
-                          │ payment_method  │
-                          │ payment_status  │
-                          │ transaction_id  │
-                          │ payment_date    │
-                          └─────────────────┘
-
-┌─────────────────┐       ┌─────────────────┐
-│ emergency_      │       │ route_tracking │
-│   reports       │       │─────────────────│
-│─────────────────│       │ id (PK)         │
-│ id (PK)         │       │ booking_id (FK) │
-│ driver_id (FK)  │       │ current_stop    │
-│ shuttle_route_id│       │ eta             │
-│ emergency_type  │       │ status          │
-│ location        │       │ last_updated    │
-│ description     │       └─────────────────┘
-│ status          │
-│ reported_at     │
-│ resolved_at     │
-└─────────────────┘
+```mermaid
+erDiagram
+    users {
+        int id PK
+        string username
+        string email
+        string password_hash
+        string role
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+    students {
+        int id PK
+        int user_id FK
+        string full_name
+        string mobile
+        string university
+        text home_address
+        string parent_name
+        string parent_email
+        string parent_phone
+        int total_bookings
+        date join_date
+    }
+    drivers {
+        int id PK
+        int user_id FK
+        string full_name
+        string mobile
+        string license_number
+        string vehicle_type
+        string vehicle_number
+        int seats
+        int total_trips
+        decimal rating
+        string status
+        date join_date
+    }
+    shuttle_routes {
+        int id PK
+        string bus_number
+        int driver_id FK
+        string start_location
+        string end_location
+        time start_time
+        time end_time
+        string duration
+        int stops
+        int total_seats
+        int available_seats
+        decimal price
+        boolean is_active
+        timestamp created_at
+    }
+    bookings {
+        int id PK
+        int student_id FK
+        int shuttle_route_id FK
+        json selected_seats
+        string passenger_name
+        string passenger_email
+        string passenger_phone
+        decimal total_price
+        timestamp booking_date
+        string status
+    }
+    payments {
+        int id PK
+        int booking_id FK
+        decimal amount
+        string payment_method
+        string payment_status
+        string transaction_id
+        timestamp payment_date
+    }
+    emergency_reports {
+        int id PK
+        int driver_id FK
+        int shuttle_route_id FK
+        string emergency_type
+        string location
+        text description
+        string status
+        timestamp reported_at
+        timestamp resolved_at
+    }
+    route_tracking {
+        int id PK
+        int booking_id FK
+        int current_stop
+        string eta
+        string status
+        timestamp last_updated
+    }
+    users ||--o{ students : "1:1"
+    users ||--o{ drivers : "1:1"
+    drivers ||--o{ shuttle_routes : "1:N"
+    students ||--o{ bookings : "1:N"
+    shuttle_routes ||--o{ bookings : "1:N"
+    bookings ||--o{ payments : "1:1"
+    drivers ||--o{ emergency_reports : "1:N"
+    shuttle_routes ||--o{ emergency_reports : "1:N"
+    bookings ||--o{ route_tracking : "1:1"
+```
 
 Legend:
 ═══════
 PK = Primary Key
 FK = Foreign Key
-1 = One-to-One relationship
-1 = One-to-Many relationship (1 can have many)
+1:1 = One-to-One relationship
+1:N = One-to-Many relationship
 
 Key Relationships:
 ─────────────────
 • users → students (1:1)
 • users → drivers (1:1)
-• students → bookings (1:many)
-• drivers → shuttle_routes (1:many)
-• shuttle_routes → bookings (1:many)
-• bookings → payments (1:many)
-• drivers → emergency_reports (1:many)
-• shuttle_routes → emergency_reports (1:many)
-• bookings → route_tracking (1:many)
+• students → bookings (1:N)
+• drivers → shuttle_routes (1:N)
+• shuttle_routes → bookings (1:N)
+• bookings → payments (1:1)
+• drivers → emergency_reports (1:N)
+• shuttle_routes → emergency_reports (1:N)
+• bookings → route_tracking (1:1)
 
 No Cancellation Fields:
 ─────────────────────
