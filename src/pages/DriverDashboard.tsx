@@ -1,6 +1,7 @@
 /// <reference types="styled-jsx" />
 
 import React, { useState } from 'react';
+import RouteMap from '../components/RouteMap';
 
 interface Seat {
   id: number;
@@ -49,6 +50,14 @@ const DriverDashboard = () => {
   const [selectedEmergencyReason, setSelectedEmergencyReason] = useState<string>('');
   const [busAvailable, setBusAvailable] = useState(true);
 
+  // Route Form state
+  const [routeForm, setRouteForm] = useState({
+    startTime: '',
+    endTime: '',
+    startRoute: '',
+    endRoute: ''
+  });
+
   const handleSeatClick = (seat: Seat) => {
     setSelectedSeat(seat);
     setShowSeatModal(true);
@@ -76,6 +85,19 @@ const DriverDashboard = () => {
 
   const toggleBusStatus = () => {
     setBusAvailable(!busAvailable);
+  };
+
+  const handleRouteFormChange = (field: string, value: string) => {
+    setRouteForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleRouteFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, this would save the route to the database
+    alert(`Route updated successfully!\nStart Time: ${routeForm.startTime}\nEnd Time: ${routeForm.endTime}\nStart Route: ${routeForm.startRoute}\nEnd Route: ${routeForm.endRoute}`);
   };
 
   const renderSeat = (seat: Seat) => (
@@ -169,8 +191,84 @@ const DriverDashboard = () => {
 
       {/* Main Content */}
       <div className="dashboard-content">
-        {/* Left Panel - Bus Status & Seats */}
+        {/* Left Panel - Route Management, Bus Status & Seats */}
         <div className="left-panel">
+          {/* Route Form Card */}
+          <div className="route-form-card">
+            <h3>🛣️ Route Management</h3>
+            <form className="route-form" onSubmit={handleRouteFormSubmit}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="startTime">
+                    <i className="fas fa-clock"></i> Start Time
+                  </label>
+                  <input
+                    type="time"
+                    id="startTime"
+                    value={routeForm.startTime}
+                    onChange={(e) => handleRouteFormChange('startTime', e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="endTime">
+                    <i className="fas fa-clock"></i> End Time
+                  </label>
+                  <input
+                    type="time"
+                    id="endTime"
+                    value={routeForm.endTime}
+                    onChange={(e) => handleRouteFormChange('endTime', e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="startRoute">
+                    <i className="fas fa-map-marker-alt"></i> Start Route
+                  </label>
+                  <select
+                    id="startRoute"
+                    value={routeForm.startRoute}
+                    onChange={(e) => handleRouteFormChange('startRoute', e.target.value)}
+                    required
+                  >
+                    <option value="">Select start location</option>
+                    <option value="campus">🏫 University Campus</option>
+                    <option value="rajagiriya">🏘️ Rajagiriya</option>
+                    <option value="nugegoda">🏘️ Nugegoda</option>
+                    <option value="dehiwala">🏘️ Dehiwala</option>
+                    <option value="moratuwa">🏘️ Moratuwa</option>
+                    <option value="colombo">🏙️ Colombo City</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="endRoute">
+                    <i className="fas fa-flag-checkered"></i> End Route
+                  </label>
+                  <select
+                    id="endRoute"
+                    value={routeForm.endRoute}
+                    onChange={(e) => handleRouteFormChange('endRoute', e.target.value)}
+                    required
+                  >
+                    <option value="">Select end location</option>
+                    <option value="campus">🏫 University Campus</option>
+                    <option value="rajagiriya">🏘️ Rajagiriya</option>
+                    <option value="nugegoda">🏘️ Nugegoda</option>
+                    <option value="dehiwala">🏘️ Dehiwala</option>
+                    <option value="moratuwa">🏘️ Moratuwa</option>
+                    <option value="colombo">🏙️ Colombo City</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className="update-route-btn">
+                <i className="fas fa-save"></i> Update Route
+              </button>
+            </form>
+          </div>
+
           {/* Bus Status Card */}
           <div className="status-card">
             <h3>📍 Bus Status</h3>
@@ -228,31 +326,17 @@ const DriverDashboard = () => {
             <h3>🗺️ Live Route Map</h3>
 
             {/* Route Map */}
-            <div className="map-placeholder">
-              <div className="map-header">
-                <span className="map-status">Map Loading...</span>
-              </div>
-              <div className="map-content">
-                <div className="map-visualization">
-                  <div className="route-line"></div>
-                </div>
-                <div className="map-points-display">
-                  <div className="map-section-title">
-                    <h4>🗺️ Live Route Map</h4>
-                  </div>
-                  <div className="map-points-row">
-                    <button className="map-point-btn">
-                      <span className="point-icon">📍</span>
-                      <span className="point-label">Start</span>
-                    </button>
-                    <button className="map-point-btn">
-                      <span className="point-icon">🎯</span>
-                      <span className="point-label">End</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <RouteMap
+              route={[
+                [6.9271, 79.8612], // Colombo
+                [6.9147, 79.9725], // Rajagiriya
+                [6.9000, 79.9580], // Nugegoda
+                [6.8650, 79.8997], // Moratuwa
+              ]}
+              shuttlePosition={[6.9147, 79.9725]}
+              currentStop={1}
+              isTracking={true}
+            />
           </div>
         </div>
       </div>
@@ -531,7 +615,7 @@ const DriverDashboard = () => {
           gap: 30px;
         }
 
-        .status-card, .seat-card, .route-card {
+        .status-card, .seat-card, .route-card, .route-form-card {
           background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(10px);
           padding: 25px;
@@ -540,7 +624,7 @@ const DriverDashboard = () => {
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .status-card h3, .seat-card h3, .route-card h3 {
+        .status-card h3, .seat-card h3, .route-card h3, .route-form-card h3 {
           margin: 0 0 20px 0;
           color: var(--primary);
           font-size: 1.4rem;
@@ -853,6 +937,78 @@ const DriverDashboard = () => {
           color: #333;
         }
 
+        /* Route Form Styles */
+        .route-form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .form-row {
+          display: flex;
+          gap: 15px;
+        }
+
+        .form-group {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .form-group label {
+          font-weight: 600;
+          color: #555;
+          font-size: 0.9rem;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .form-group input,
+        .form-group select {
+          padding: 12px 15px;
+          border: 2px solid rgba(132, 23, 186, 0.2);
+          border-radius: 8px;
+          font-size: 1rem;
+          font-family: inherit;
+          background: white;
+          transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px rgba(132, 23, 186, 0.1);
+        }
+
+        .update-route-btn {
+          background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+          color: white;
+          border: none;
+          padding: 12px 25px;
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 10px;
+        }
+
+        .update-route-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(132, 23, 186, 0.3);
+        }
+
+        .update-route-btn:active {
+          transform: translateY(0);
+        }
+
         @media (max-width: 768px) {
           .dashboard-content {
             grid-template-columns: 1fr;
@@ -892,11 +1048,20 @@ const DriverDashboard = () => {
             min-width: unset;
           }
 
+          .form-row {
+            flex-direction: column;
+            gap: 15px;
+          }
+
+          .update-route-btn {
+            width: 100%;
+          }
+
           .header-content h1 {
             font-size: 2rem;
           }
 
-          .status-card, .seat-card, .route-card {
+          .status-card, .seat-card, .route-card, .route-form-card {
             padding: 20px;
           }
 
