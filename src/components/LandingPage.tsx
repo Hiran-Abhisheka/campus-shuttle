@@ -43,6 +43,10 @@ export default function LandingPage() {
     setLoginView('student');
   };
 
+  const handleAdminLoginClick = () => {
+    setLoginView('admin');
+  };
+
   const handleRiderSignupClick = () => {
     setSignupView('rider');
   };
@@ -130,7 +134,7 @@ export default function LandingPage() {
                     <h3>Rider Login</h3>
                     <p>Access driver dashboard and manage routes</p>
                     <button className="option-btn rider-btn" onClick={handleRiderLoginClick}>
-                      Continue as Rider
+                      Rider
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -142,7 +146,19 @@ export default function LandingPage() {
                     <h3>Student Login</h3>
                     <p>Track shuttles and book your rides</p>
                     <button className="option-btn student-btn" onClick={handleStudentLoginClick}>
-                      Continue as Student
+                      Student
+                      <i className="fas fa-arrow-right"></i>
+                    </button>
+                  </div>
+
+                  <div className="login-option">
+                    <div className="login-option-icon admin-icon">
+                      <i className="fas fa-cog"></i>
+                    </div>
+                    <h3>Admin Login</h3>
+                    <p>Manage system and users only</p>
+                    <button className="option-btn admin-btn" onClick={handleAdminLoginClick}>
+                      Admin
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -252,6 +268,64 @@ export default function LandingPage() {
 
                   <button type="submit" className="submit-btn">
                     Login as Student
+                    <i className="fas fa-sign-in-alt"></i>
+                  </button>
+
+                  <p className="form-footer">
+                    Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); closeLoginModal(); handleSignupClick(e); }}>Sign up</a>
+                  </p>
+                </form>
+              </>
+            )}
+
+            {loginView === 'admin' && (
+              <>
+                <button className="back-btn" onClick={handleBackToSelect}>
+                  <i className="fas fa-arrow-left"></i>
+                </button>
+                <h2 className="modal-title">Admin Login</h2>
+                <p className="modal-subtitle">Welcome back! Please enter your details</p>
+
+                <form className="login-form" onSubmit={(e) => {
+                  e.preventDefault();
+                  closeLoginModal();
+                  navigate('/admin-dashboard');
+                }}>
+                  <div className="form-group">
+                                        <label htmlFor="admin-username">
+                      <i className="fas fa-user-circle"></i>
+                      Username
+                    </label>
+                    <input
+                      type="text"
+                      id="admin-username"
+                      placeholder="Enter your username"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="admin-password">
+                      <i className="fas fa-lock"></i> Password
+                    </label>
+                    <input
+                      type="password"
+                      id="admin-password"
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-options">
+                    <label className="remember-me">
+                      <input type="checkbox" />
+                      <span>Remember me</span>
+                    </label>
+                    <a href="#" className="forgot-password">Forgot Password?</a>
+                  </div>
+
+                  <button type="submit" className="submit-btn">
+                    Login as Admin
                     <i className="fas fa-sign-in-alt"></i>
                   </button>
 

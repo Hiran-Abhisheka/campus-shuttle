@@ -133,7 +133,6 @@ const Navbar = () => {
             ) : (isLoggedIn && userType === 'rider') && (location.pathname === '/driver-dashboard' || location.pathname === '/contact') ? (
               <>
                 <Link to="/driver-dashboard" className="nav-link" onClick={closeMobileMenu}>Dashboard</Link>
-                <Link to="/admin-dashboard" className="nav-link" onClick={closeMobileMenu}>Admin</Link>
                 <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
                 <a href="#message" className="nav-link" onClick={closeMobileMenu}>Message</a>
                 <Link to="/driver-profile" className="nav-button" onClick={closeMobileMenu}>
@@ -183,7 +182,7 @@ const Navbar = () => {
                     <h3>Rider Login</h3>
                     <p>Access driver dashboard and manage routes</p>
                     <button className="option-btn rider-btn" onClick={handleRiderLogin}>
-                      Continue as Rider
+                      Rider
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -195,7 +194,7 @@ const Navbar = () => {
                     <h3>Student Login</h3>
                     <p>Track shuttles and book your rides</p>
                     <button className="option-btn student-btn" onClick={handleStudentLogin}>
-                      Continue as Student
+                      Student
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -205,9 +204,9 @@ const Navbar = () => {
                       <i className="fas fa-cog"></i>
                     </div>
                     <h3>Admin Login</h3>
-                    <p>Manage system, users and monitor operations</p>
+                    <p>Manage system and users only</p>
                     <button className="option-btn admin-btn" onClick={handleAdminLogin}>
-                      Continue as Admin
+                      Admin
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -221,7 +220,7 @@ const Navbar = () => {
                   <i className="fas fa-arrow-left"></i>
                 </button>
                 <h2 className="modal-title">Rider Login</h2>
-                <p className="modal-subtitle">Sign in to your rider account</p>
+                <p className="modal-subtitle">Welcome back! Please enter your details</p>
 
                 <form className="login-form" onSubmit={(e) => {
                   e.preventDefault();
@@ -265,12 +264,12 @@ const Navbar = () => {
                     <a href="#" className="forgot-password">Forgot Password?</a>
                   </div>
 
-                  <button type="submit" className="submit-btn rider-submit">
+                  <button type="submit" className="submit-btn">
                     <i className="fas fa-sign-in-alt"></i>
                     Login as Rider
                   </button>
 
-                  <p className="signup-link">
+                  <p className="form-footer">
                     Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); switchToSignup(); }}>Sign up</a>
                   </p>
                 </form>
@@ -283,7 +282,7 @@ const Navbar = () => {
                   <i className="fas fa-arrow-left"></i>
                 </button>
                 <h2 className="modal-title">Student Login</h2>
-                <p className="modal-subtitle">Sign in to your student account</p>
+                <p className="modal-subtitle">Welcome back! Please enter your details</p>
 
                 <form className="login-form" onSubmit={(e) => {
                   e.preventDefault();
@@ -327,24 +326,25 @@ const Navbar = () => {
                     <a href="#" className="forgot-password">Forgot Password?</a>
                   </div>
 
-                  <button type="submit" className="submit-btn student-submit">
+                  <button type="submit" className="submit-btn">
                     <i className="fas fa-sign-in-alt"></i>
                     Login as Student
                   </button>
 
-                  <p className="signup-link">
+                  <p className="form-footer">
                     Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); switchToSignup(); }}>Sign up</a>
                   </p>
                 </form>
               </>
             )}
+
             {loginView === 'admin' && (
               <>
                 <button className="back-btn" onClick={goBackToSelect}>
                   <i className="fas fa-arrow-left"></i>
                 </button>
                 <h2 className="modal-title">Admin Login</h2>
-                <p className="modal-subtitle">Sign in to your admin account</p>
+                <p className="modal-subtitle">Welcome back! Please enter your details</p>
 
                 <form className="login-form" onSubmit={(e) => {
                   e.preventDefault();
@@ -356,8 +356,8 @@ const Navbar = () => {
                 }}>
                   <div className="form-group">
                     <label htmlFor="admin-username">
-                      <i className="fas fa-user-shield"></i>
-                      Admin Username
+                      <i className="fas fa-user-circle"></i>
+                      Username
                     </label>
                     <input 
                       type="text" 
@@ -388,10 +388,14 @@ const Navbar = () => {
                     <a href="#" className="forgot-password">Forgot Password?</a>
                   </div>
 
-                  <button type="submit" className="submit-btn admin-submit">
+                  <button type="submit" className="submit-btn">
                     <i className="fas fa-sign-in-alt"></i>
                     Login as Admin
                   </button>
+
+                  <p className="form-footer">
+                    Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); switchToSignup(); }}>Sign up</a>
+                  </p>
                 </form>
               </>
             )}          </div>
