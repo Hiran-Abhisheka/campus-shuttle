@@ -6,10 +6,10 @@ const Navbar = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [loginView, setLoginView] = useState<'select' | 'rider' | 'student'>('select');
-  const [signupView, setSignupView] = useState<'select' | 'rider' | 'student'>('select');
+  const [loginView, setLoginView] = useState<'select' | 'driver' | 'student'>('select');
+  const [signupView, setSignupView] = useState<'select' | 'driver' | 'student'>('select');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userType, setUserType] = useState<'student' | 'rider' | 'admin' | null>(null);
+  const [userType, setUserType] = useState<'student' | 'driver' | 'admin' | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,15 +31,15 @@ const Navbar = () => {
 
   useEffect(() => {
     const studentLoggedIn = localStorage.getItem('studentLoggedIn');
-    const riderLoggedIn = localStorage.getItem('riderLoggedIn');
+    const driverLoggedIn = localStorage.getItem('driverLoggedIn');
     const adminLoggedIn = localStorage.getItem('adminLoggedIn');
     
     if (studentLoggedIn === 'true') {
       setIsLoggedIn(true);
       setUserType('student');
-    } else if (riderLoggedIn === 'true') {
+    } else if (driverLoggedIn === 'true') {
       setIsLoggedIn(true);
-      setUserType('rider');
+      setUserType('driver');
     } else if (adminLoggedIn === 'true') {
       setIsLoggedIn(true);
       setUserType('admin');
@@ -64,8 +64,8 @@ const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
-  const handleRiderLogin = () => {
-    setLoginView('rider');
+  const handleDriverLogin = () => {
+    setLoginView('driver');
   };
 
   const handleStudentLogin = () => {
@@ -80,8 +80,8 @@ const Navbar = () => {
     setLoginView('select');
   };
 
-  const handleRiderSignup = () => {
-    setSignupView('rider');
+  const handleDriverSignup = () => {
+    setSignupView('driver');
   };
 
   const handleStudentSignup = () => {
@@ -130,7 +130,7 @@ const Navbar = () => {
                   <i className="fas fa-user-circle"></i> Profile
                 </Link>
               </>
-            ) : (isLoggedIn && userType === 'rider') && (location.pathname === '/driver-dashboard' || location.pathname === '/contact') ? (
+            ) : (isLoggedIn && userType === 'driver') && (location.pathname === '/driver-dashboard' || location.pathname === '/contact') ? (
               <>
                 <Link to="/driver-dashboard" className="nav-link" onClick={closeMobileMenu}>Dashboard</Link>
                 <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
@@ -179,10 +179,10 @@ const Navbar = () => {
                     <div className="login-option-icon rider-icon">
                       <i className="fas fa-id-card"></i>
                     </div>
-                    <h3>Rider Login</h3>
-                    <p>Access driver dashboard and manage routes</p>
-                    <button className="option-btn rider-btn" onClick={handleRiderLogin}>
-                      Rider
+                    <h3>Driver Login</h3>
+                    <p>Access driver dashboard</p>
+                    <button className="option-btn rider-btn" onClick={handleDriverLogin}>
+                      Driver
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -214,43 +214,43 @@ const Navbar = () => {
               </>
             )}
 
-            {loginView === 'rider' && (
+            {loginView === 'driver' && (
               <>
                 <button className="back-btn" onClick={goBackToSelect}>
                   <i className="fas fa-arrow-left"></i>
                 </button>
-                <h2 className="modal-title">Rider Login</h2>
+                <h2 className="modal-title">Driver Login</h2>
                 <p className="modal-subtitle">Welcome back! Please enter your details</p>
 
                 <form className="login-form" onSubmit={(e) => {
                   e.preventDefault();
-                  localStorage.setItem('riderLoggedIn', 'true');
+                  localStorage.setItem('driverLoggedIn', 'true');
                   setIsLoggedIn(true);
-                  setUserType('rider');
+                  setUserType('driver');
                   closeModal();
                   navigate('/driver-dashboard');
                 }}>
                   <div className="form-group">
-                    <label htmlFor="rider-username">
+                    <label htmlFor="driver-username">
                       <i className="fas fa-user-circle"></i>
                       Username
                     </label>
                     <input 
                       type="text" 
-                      id="rider-username" 
+                      id="driver-username" 
                       placeholder="Enter your username"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="rider-password">
+                    <label htmlFor="driver-password">
                       <i className="fas fa-lock"></i>
                       Password
                     </label>
                     <input 
                       type="password" 
-                      id="rider-password" 
+                      id="driver-password" 
                       placeholder="Enter your password"
                       required
                     />
@@ -266,7 +266,7 @@ const Navbar = () => {
 
                   <button type="submit" className="submit-btn">
                     <i className="fas fa-sign-in-alt"></i>
-                    Login as Rider
+                    Login as Driver
                   </button>
 
                   <p className="form-footer">
@@ -415,10 +415,10 @@ const Navbar = () => {
                     <div className="login-option-icon rider-icon">
                       <i className="fas fa-id-card"></i>
                     </div>
-                    <h3>Rider Signup</h3>
+                    <h3>Driver Signup</h3>
                     <p>Register as a driver and start earning</p>
-                    <button className="option-btn rider-btn" onClick={handleRiderSignup}>
-                      Rider
+                    <button className="option-btn rider-btn" onClick={handleDriverSignup}>
+                      Driver
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -438,13 +438,13 @@ const Navbar = () => {
               </>
             )}
 
-            {signupView === 'rider' && (
+            {signupView === 'driver' && (
               <>
                 <button className="back-btn" onClick={goBackToSignupSelect}>
                   <i className="fas fa-arrow-left"></i>
                 </button>
-                <h2 className="modal-title">Rider Signup</h2>
-                <p className="modal-subtitle">Create your rider account</p>
+                <h2 className="modal-title">Driver Signup</h2>
+                <p className="modal-subtitle">Create your driver account</p>
 
                 <form className="login-form signup-form-extended">
                   {/* Personal Details Section */}
@@ -453,65 +453,78 @@ const Navbar = () => {
                       <i className="fas fa-user-circle"></i> Personal Details
                     </h3>
                     <div className="form-group">
-                      <label htmlFor="nav-rider-signup-name">
+                      <label htmlFor="nav-driver-signup-name">
                         <i className="fas fa-user"></i>
                         Full Name
                       </label>
                       <input 
                         type="text" 
-                        id="nav-rider-signup-name" 
+                        id="nav-driver-signup-name" 
                         placeholder="Enter your full name"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="nav-rider-signup-phone">
+                      <label htmlFor="nav-driver-signup-username">
+                        <i className="fas fa-user-circle"></i>
+                        Username
+                      </label>
+                      <input 
+                        type="text" 
+                        id="nav-driver-signup-username" 
+                        placeholder="Enter your username"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="nav-driver-signup-phone">
                         <i className="fas fa-phone"></i>
                         Phone Number
                       </label>
                       <input 
                         type="tel" 
-                        id="nav-rider-signup-phone" 
+                        id="nav-driver-signup-phone" 
                         placeholder="Enter your phone number"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="nav-rider-signup-email">
+                      <label htmlFor="nav-driver-signup-email">
                         <i className="fas fa-envelope"></i>
                         Email Address
                       </label>
                       <input 
                         type="email" 
-                        id="nav-rider-signup-email" 
+                        id="nav-driver-signup-email" 
                         placeholder="Enter your email"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="nav-rider-signup-password">
+                      <label htmlFor="nav-driver-signup-password">
                         <i className="fas fa-lock"></i>
                         Password
                       </label>
                       <input 
                         type="password" 
-                        id="nav-rider-signup-password" 
+                        id="nav-driver-signup-password" 
                         placeholder="Create a password"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="nav-rider-signup-confirm-password">
+                      <label htmlFor="nav-driver-signup-confirm-password">
                         <i className="fas fa-lock"></i>
                         Confirm Password
                       </label>
                       <input 
                         type="password" 
-                        id="nav-rider-signup-confirm-password" 
+                        id="nav-driver-signup-confirm-password" 
                         placeholder="Confirm your password"
                         required
                       />
@@ -524,39 +537,39 @@ const Navbar = () => {
                       <i className="fas fa-id-card"></i> License & Documents
                     </h3>
                     <div className="form-group">
-                      <label htmlFor="nav-rider-license-number">
+                      <label htmlFor="nav-driver-license-number">
                         <i className="fas fa-id-badge"></i>
                         Driver's License Number
                       </label>
                       <input 
                         type="text" 
-                        id="nav-rider-license-number" 
+                        id="nav-driver-license-number" 
                         placeholder="Enter your license number"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="nav-rider-license-upload">
+                      <label htmlFor="nav-driver-license-upload">
                         <i className="fas fa-upload"></i>
                         Upload License
                       </label>
                       <input 
                         type="file" 
-                        id="nav-rider-license-upload" 
+                        id="nav-driver-license-upload" 
                         accept="image/*,.pdf"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="nav-rider-vehicle-doc-upload">
+                      <label htmlFor="nav-driver-vehicle-doc-upload">
                         <i className="fas fa-upload"></i>
                         Upload Vehicle Document
                       </label>
                       <input 
                         type="file" 
-                        id="nav-rider-vehicle-doc-upload" 
+                        id="nav-driver-vehicle-doc-upload" 
                         accept="image/*,.pdf"
                         required
                       />
@@ -569,12 +582,12 @@ const Navbar = () => {
                       <i className="fas fa-car"></i> Vehicle Details
                     </h3>
                     <div className="form-group">
-                      <label htmlFor="nav-rider-vehicle-type">
+                      <label htmlFor="nav-driver-vehicle-type">
                         <i className="fas fa-shuttle-van"></i>
                         Vehicle Type
                       </label>
                       <select 
-                        id="nav-rider-vehicle-type"
+                        id="nav-driver-vehicle-type"
                         required
                       >
                         <option value="">Select vehicle type</option>
@@ -584,26 +597,26 @@ const Navbar = () => {
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="nav-rider-vehicle-number">
+                      <label htmlFor="nav-driver-vehicle-number">
                         <i className="fas fa-hashtag"></i>
                         Vehicle Number
                       </label>
                       <input 
                         type="text" 
-                        id="nav-rider-vehicle-number" 
+                        id="nav-driver-vehicle-number" 
                         placeholder="Enter vehicle registration number"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="nav-rider-seats">
+                      <label htmlFor="nav-driver-seats">
                         <i className="fas fa-chair"></i>
                         Number of Seats
                       </label>
                       <input 
                         type="number" 
-                        id="nav-rider-seats" 
+                        id="nav-driver-seats" 
                         placeholder="Enter number of seats"
                         min="1"
                         max="50"
@@ -614,7 +627,7 @@ const Navbar = () => {
 
                   <button type="submit" className="submit-btn rider-submit">
                     <i className="fas fa-user-plus"></i>
-                    Create Rider Account
+                    Create Driver Account
                   </button>
 
                   <p className="signup-link">

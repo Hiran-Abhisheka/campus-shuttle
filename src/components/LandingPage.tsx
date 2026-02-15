@@ -6,8 +6,8 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
-  const [loginView, setLoginView] = useState<'select' | 'rider' | 'student'>('select');
-  const [signupView, setSignupView] = useState<'select' | 'rider' | 'student'>('select');
+  const [loginView, setLoginView] = useState<'select' | 'driver' | 'student'>('select');
+  const [signupView, setSignupView] = useState<'select' | 'driver' | 'student'>('select');
   const [headingRef1, heading1Visible] = useScrollAnimation<HTMLHeadingElement>({ threshold: 0.2 });
   const [headingRef2, heading2Visible] = useScrollAnimation<HTMLHeadingElement>({ threshold: 0.2, delay: 300 });
   const [headingRef3, heading3Visible] = useScrollAnimation<HTMLHeadingElement>({ threshold: 0.2, delay: 600 });
@@ -35,8 +35,8 @@ export default function LandingPage() {
     setSignupView('select');
   };
 
-  const handleRiderLoginClick = () => {
-    setLoginView('rider');
+  const handleDriverLoginClick = () => {
+    setLoginView('driver');
   };
 
   const handleStudentLoginClick = () => {
@@ -47,8 +47,8 @@ export default function LandingPage() {
     setLoginView('admin');
   };
 
-  const handleRiderSignupClick = () => {
-    setSignupView('rider');
+  const handleDriverSignupClick = () => {
+    setSignupView('driver');
   };
 
   const handleStudentSignupClick = () => {
@@ -131,10 +131,10 @@ export default function LandingPage() {
                     <div className="login-option-icon rider-icon">
                       <i className="fas fa-id-card"></i>
                     </div>
-                    <h3>Rider Login</h3>
-                    <p>Access driver dashboard and manage routes</p>
-                    <button className="option-btn rider-btn" onClick={handleRiderLoginClick}>
-                      Rider
+                    <h3>Driver Login</h3>
+                    <p>Access driver dashboard</p>
+                    <button className="option-btn rider-btn" onClick={handleDriverLoginClick}>
+                      Driver
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -166,35 +166,35 @@ export default function LandingPage() {
               </>
             )}
 
-            {loginView === 'rider' && (
+            {loginView === 'driver' && (
               <>
                 <button className="back-btn" onClick={handleBackToSelect}>
                   <i className="fas fa-arrow-left"></i>
                 </button>
-                <h2 className="modal-title">Rider Login</h2>
+                <h2 className="modal-title">Driver Login</h2>
                 <p className="modal-subtitle">Welcome back! Please enter your details</p>
 
                 <form className="login-form">
                   <div className="form-group">
-                                        <label htmlFor="rider-username">
+                                        <label htmlFor="driver-username">
                       <i className="fas fa-user-circle"></i>
                       Username
                     </label>
                     <input
                       type="text"
-                      id="rider-username"
+                      id="driver-username"
                       placeholder="Enter your username"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="rider-password">
+                    <label htmlFor="driver-password">
                       <i className="fas fa-lock"></i> Password
                     </label>
                     <input
                       type="password"
-                      id="rider-password"
+                      id="driver-password"
                       placeholder="Enter your password"
                       required
                     />
@@ -209,7 +209,7 @@ export default function LandingPage() {
                   </div>
 
                   <button type="submit" className="submit-btn">
-                    Login as Rider
+                    Login as Driver
                     <i className="fas fa-sign-in-alt"></i>
                   </button>
 
@@ -352,10 +352,10 @@ export default function LandingPage() {
                     <div className="login-option-icon rider-icon">
                       <i className="fas fa-id-card"></i>
                     </div>
-                    <h3>Rider Signup</h3>
+                    <h3>Driver Signup</h3>
                     <p>Register as a driver and start earning</p>
-                    <button className="option-btn rider-btn" onClick={handleRiderSignupClick}>
-                      Rider
+                    <button className="option-btn rider-btn" onClick={handleDriverSignupClick}>
+                      Driver
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -375,13 +375,13 @@ export default function LandingPage() {
               </>
             )}
 
-            {signupView === 'rider' && (
+            {signupView === 'driver' && (
               <>
                 <button className="back-btn" onClick={handleBackToSignupSelect}>
                   <i className="fas fa-arrow-left"></i>
                 </button>
-                <h2 className="modal-title">Rider Signup</h2>
-                <p className="modal-subtitle">Create your rider account</p>
+                <h2 className="modal-title">Driver Signup</h2>
+                <p className="modal-subtitle">Create your driver account</p>
 
                 <form className="login-form signup-form-extended">
                   {/* Personal Details Section */}
@@ -390,60 +390,72 @@ export default function LandingPage() {
                       <i className="fas fa-user-circle"></i> Personal Details
                     </h3>
                     <div className="form-group">
-                      <label htmlFor="rider-signup-name">
+                      <label htmlFor="driver-signup-name">
                         <i className="fas fa-user"></i> Full Name
                       </label>
                       <input
                         type="text"
-                        id="rider-signup-name"
+                        id="driver-signup-name"
                         placeholder="Enter your full name"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="rider-signup-phone">
+                      <label htmlFor="driver-signup-username">
+                        <i className="fas fa-user-circle"></i> Username
+                      </label>
+                      <input
+                        type="text"
+                        id="driver-signup-username"
+                        placeholder="Enter your username"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="driver-signup-phone">
                         <i className="fas fa-phone"></i> Phone Number
                       </label>
                       <input
                         type="tel"
-                        id="rider-signup-phone"
+                        id="driver-signup-phone"
                         placeholder="Enter your phone number"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="rider-signup-email">
+                      <label htmlFor="driver-signup-email">
                         <i className="fas fa-envelope"></i> Email Address
                       </label>
                       <input
                         type="email"
-                        id="rider-signup-email"
+                        id="driver-signup-email"
                         placeholder="Enter your email"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="rider-signup-password">
+                      <label htmlFor="driver-signup-password">
                         <i className="fas fa-lock"></i> Password
                       </label>
                       <input
                         type="password"
-                        id="rider-signup-password"
+                        id="driver-signup-password"
                         placeholder="Create a password"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="rider-signup-confirm-password">
+                      <label htmlFor="driver-signup-confirm-password">
                         <i className="fas fa-lock"></i> Confirm Password
                       </label>
                       <input
                         type="password"
-                        id="rider-signup-confirm-password"
+                        id="driver-signup-confirm-password"
                         placeholder="Confirm your password"
                         required
                       />
@@ -456,36 +468,36 @@ export default function LandingPage() {
                       <i className="fas fa-id-card"></i> License & Documents
                     </h3>
                     <div className="form-group">
-                      <label htmlFor="rider-license-number">
+                      <label htmlFor="driver-license-number">
                         <i className="fas fa-id-badge"></i> Driver's License Number
                       </label>
                       <input
                         type="text"
-                        id="rider-license-number"
+                        id="driver-license-number"
                         placeholder="Enter your license number"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="rider-license-upload">
+                      <label htmlFor="driver-license-upload">
                         <i className="fas fa-upload"></i> Upload License
                       </label>
                       <input
                         type="file"
-                        id="rider-license-upload"
+                        id="driver-license-upload"
                         accept="image/*,.pdf"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="rider-vehicle-doc-upload">
+                      <label htmlFor="driver-vehicle-doc-upload">
                         <i className="fas fa-upload"></i> Upload Vehicle Document
                       </label>
                       <input
                         type="file"
-                        id="rider-vehicle-doc-upload"
+                        id="driver-vehicle-doc-upload"
                         accept="image/*,.pdf"
                         required
                       />
@@ -498,10 +510,10 @@ export default function LandingPage() {
                       <i className="fas fa-car"></i> Vehicle Details
                     </h3>
                     <div className="form-group">
-                      <label htmlFor="rider-vehicle-type">
+                      <label htmlFor="driver-vehicle-type">
                         <i className="fas fa-shuttle-van"></i> Vehicle Type
                       </label>
-                      <select id="rider-vehicle-type" required>
+                      <select id="driver-vehicle-type" required>
                         <option value="">Select vehicle type</option>
                         <option value="bus">Bus</option>
                         <option value="minibus">Minibus</option>
@@ -509,24 +521,24 @@ export default function LandingPage() {
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="rider-vehicle-number">
+                      <label htmlFor="driver-vehicle-number">
                         <i className="fas fa-hashtag"></i> Vehicle Number
                       </label>
                       <input
                         type="text"
-                        id="rider-vehicle-number"
+                        id="driver-vehicle-number"
                         placeholder="Enter vehicle registration number"
                         required
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="rider-seats">
+                      <label htmlFor="driver-seats">
                         <i className="fas fa-chair"></i> Number of Seats
                       </label>
                       <input
                         type="number"
-                        id="rider-seats"
+                        id="driver-seats"
                         placeholder="Enter number of seats"
                         min="1"
                         max="50"
@@ -536,7 +548,7 @@ export default function LandingPage() {
                   </div>
 
                   <button type="submit" className="submit-btn">
-                    Create Rider Account
+                    Create Driver Account
                     <i className="fas fa-user-plus"></i>
                   </button>
 

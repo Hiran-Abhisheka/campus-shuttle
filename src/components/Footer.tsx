@@ -8,10 +8,10 @@ const Footer = () => {
   const location = useLocation();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
-  const [loginView, setLoginView] = useState<'select' | 'rider' | 'student'>('select');
-  const [signupView, setSignupView] = useState<'select' | 'rider' | 'student'>('select');
+  const [loginView, setLoginView] = useState<'select' | 'driver' | 'student'>('select');
+  const [signupView, setSignupView] = useState<'select' | 'driver' | 'student'>('select');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userType, setUserType] = useState<'student' | 'rider' | null>(null);
+  const [userType, setUserType] = useState<'student' | 'driver' | null>(null);
   const [brandRef, brandVisible] = useScrollAnimation<HTMLDivElement>({ threshold: 0.1, delay: 0 });
   const [linksRef, linksVisible] = useScrollAnimation<HTMLDivElement>({ threshold: 0.1, delay: 200 });
   const [servicesRef, servicesVisible] = useScrollAnimation<HTMLDivElement>({ threshold: 0.1, delay: 400 });
@@ -35,8 +35,8 @@ const Footer = () => {
     setLoginView('select');
   };
 
-  const handleRiderLoginClick = () => {
-    setLoginView('rider');
+  const handleDriverLoginClick = () => {
+    setLoginView('driver');
   };
 
   const handleStudentLoginClick = () => {
@@ -47,8 +47,8 @@ const Footer = () => {
     setLoginView('select');
   };
 
-  const handleRiderSignupClick = () => {
-    setSignupView('rider');
+  const handleDriverSignupClick = () => {
+    setSignupView('driver');
   };
 
   const handleStudentSignupClick = () => {
@@ -222,10 +222,10 @@ const Footer = () => {
                   <div className="login-option-icon rider-icon">
                     <i className="fas fa-id-card"></i>
                   </div>
-                  <h3>Rider Signup</h3>
+                  <h3>Driver Signup</h3>
                   <p>Register as a driver and start earning</p>
-                  <button className="option-btn rider-btn" onClick={handleRiderSignupClick}>
-                    Rider
+                  <button className="option-btn rider-btn" onClick={handleDriverSignupClick}>
+                    Driver
                     <i className="fas fa-arrow-right"></i>
                   </button>
                 </div>
@@ -245,13 +245,13 @@ const Footer = () => {
             </>
           )}
 
-          {signupView === 'rider' && (
+          {signupView === 'driver' && (
             <>
               <button className="back-btn" onClick={handleBackToSignupSelect}>
                 <i className="fas fa-arrow-left"></i>
               </button>
-              <h2 className="modal-title">Rider Signup</h2>
-              <p className="modal-subtitle">Create your rider account</p>
+              <h2 className="modal-title">Driver Signup</h2>
+              <p className="modal-subtitle">Create your driver account</p>
 
               <form className="login-form signup-form-extended">
                 {/* Personal Details Section */}
@@ -260,60 +260,72 @@ const Footer = () => {
                     <i className="fas fa-user-circle"></i> Personal Details
                   </h3>
                   <div className="form-group">
-                    <label htmlFor="footer-rider-signup-name">
+                    <label htmlFor="footer-driver-signup-name">
                       <i className="fas fa-user"></i> Full Name
                     </label>
                     <input
                       type="text"
-                      id="footer-rider-signup-name"
+                      id="footer-driver-signup-name"
                       placeholder="Enter your full name"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="footer-rider-signup-phone">
+                    <label htmlFor="footer-driver-signup-username">
+                      <i className="fas fa-user-circle"></i> Username
+                    </label>
+                    <input
+                      type="text"
+                      id="footer-driver-signup-username"
+                      placeholder="Enter your username"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="footer-driver-signup-phone">
                       <i className="fas fa-phone"></i> Phone Number
                     </label>
                     <input
                       type="tel"
-                      id="footer-rider-signup-phone"
+                      id="footer-driver-signup-phone"
                       placeholder="Enter your phone number"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="footer-rider-signup-email">
+                    <label htmlFor="footer-driver-signup-email">
                       <i className="fas fa-envelope"></i> Email Address
                     </label>
                     <input
                       type="email"
-                      id="footer-rider-signup-email"
+                      id="footer-driver-signup-email"
                       placeholder="Enter your email"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="footer-rider-signup-password">
+                    <label htmlFor="footer-driver-signup-password">
                       <i className="fas fa-lock"></i> Password
                     </label>
                     <input
                       type="password"
-                      id="footer-rider-signup-password"
+                      id="footer-driver-signup-password"
                       placeholder="Create a password"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="footer-rider-signup-confirm-password">
+                    <label htmlFor="footer-driver-signup-confirm-password">
                       <i className="fas fa-lock"></i> Confirm Password
                     </label>
                     <input
                       type="password"
-                      id="footer-rider-signup-confirm-password"
+                      id="footer-driver-signup-confirm-password"
                       placeholder="Confirm your password"
                       required
                     />
@@ -326,36 +338,36 @@ const Footer = () => {
                     <i className="fas fa-id-card"></i> License & Documents
                   </h3>
                   <div className="form-group">
-                    <label htmlFor="footer-rider-license-number">
+                    <label htmlFor="footer-driver-license-number">
                       <i className="fas fa-id-badge"></i> Driver's License Number
                     </label>
                     <input
                       type="text"
-                      id="footer-rider-license-number"
+                      id="footer-driver-license-number"
                       placeholder="Enter your license number"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="footer-rider-license-upload">
+                    <label htmlFor="footer-driver-license-upload">
                       <i className="fas fa-upload"></i> Upload License
                     </label>
                     <input
                       type="file"
-                      id="footer-rider-license-upload"
+                      id="footer-driver-license-upload"
                       accept="image/*,.pdf"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="footer-rider-vehicle-doc-upload">
+                    <label htmlFor="footer-driver-vehicle-doc-upload">
                       <i className="fas fa-upload"></i> Upload Vehicle Document
                     </label>
                     <input
                       type="file"
-                      id="footer-rider-vehicle-doc-upload"
+                      id="footer-driver-vehicle-doc-upload"
                       accept="image/*,.pdf"
                       required
                     />
@@ -368,10 +380,10 @@ const Footer = () => {
                     <i className="fas fa-car"></i> Vehicle Details
                   </h3>
                   <div className="form-group">
-                    <label htmlFor="footer-rider-vehicle-type">
+                    <label htmlFor="footer-driver-vehicle-type">
                       <i className="fas fa-shuttle-van"></i> Vehicle Type
                     </label>
-                    <select id="footer-rider-vehicle-type" required>
+                    <select id="footer-driver-vehicle-type" required>
                       <option value="">Select vehicle type</option>
                       <option value="bus">Bus</option>
                       <option value="minibus">Minibus</option>
@@ -379,24 +391,24 @@ const Footer = () => {
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="footer-rider-vehicle-number">
+                    <label htmlFor="footer-driver-vehicle-number">
                       <i className="fas fa-hashtag"></i> Vehicle Number
                     </label>
                     <input
                       type="text"
-                      id="footer-rider-vehicle-number"
+                      id="footer-driver-vehicle-number"
                       placeholder="Enter vehicle registration number"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="footer-rider-seats">
+                    <label htmlFor="footer-driver-seats">
                       <i className="fas fa-chair"></i> Number of Seats
                     </label>
                     <input
                       type="number"
-                      id="footer-rider-seats"
+                      id="footer-driver-seats"
                       placeholder="Enter number of seats"
                       min="1"
                       max="50"
@@ -406,7 +418,7 @@ const Footer = () => {
                 </div>
 
                 <button type="submit" className="submit-btn">
-                  Create Rider Account
+                  Create Driver Account
                   <i className="fas fa-user-plus"></i>
                 </button>
 

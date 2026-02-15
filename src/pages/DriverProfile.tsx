@@ -8,6 +8,7 @@ const DriverProfile = () => {
 
   const [profileData, setProfileData] = useState({
     fullName: 'John Smith',
+    username: 'johnsmith',
     email: 'john.smith@shuttle.com',
     phone: '+94 77 123 4567',
     licenseNumber: 'DL123456789',
@@ -15,8 +16,7 @@ const DriverProfile = () => {
     vehicleNumber: 'BUS 101',
     seats: 45,
     emergencyContact: 'Jane Smith',
-    emergencyPhone: '+94 77 987 6543',
-    address: '456 Driver Street, Colombo, Sri Lanka'
+    emergencyPhone: '+94 77 987 6543'
   });
 
   const [profileRef, profileVisible] = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
@@ -213,16 +213,16 @@ const DriverProfile = () => {
                     )}
                   </div>
                   <div className="info-item">
-                    <label>Address</label>
-                    {editingField === 'address' ? (
+                    <label>Username</label>
+                    {editingField === 'username' ? (
                       <div className="edit-field">
                         <input
                           type="text"
-                          value={profileData.address}
-                          onChange={(e) => handleInputChange('address', e.target.value)}
+                          value={profileData.username}
+                          onChange={(e) => handleInputChange('username', e.target.value)}
                         />
                         <div className="field-actions">
-                          <button className="save-field-btn" onClick={() => handleSaveField('address')}>
+                          <button className="save-field-btn" onClick={() => handleSaveField('username')}>
                             <i className="fas fa-check"></i>
                           </button>
                           <button className="cancel-field-btn" onClick={handleCancelEdit}>
@@ -232,8 +232,8 @@ const DriverProfile = () => {
                       </div>
                     ) : (
                       <div className="display-field">
-                        <span>{profileData.address}</span>
-                        <button className="edit-field-btn" onClick={() => handleEditField('address')}>
+                        <span>{profileData.username}</span>
+                        <button className="edit-field-btn" onClick={() => handleEditField('username')}>
                           <i className="fas fa-edit"></i>
                         </button>
                       </div>
