@@ -363,6 +363,10 @@ html, body {
   max-width: 100%;
 }
 
+.signup-options {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+
 .login-option {
   background: linear-gradient(135deg, rgba(132, 23, 186, 0.03) 0%, transparent 100%);
   border: 2px solid rgba(132, 23, 186, 0.15);
@@ -860,6 +864,10 @@ html, body {
   .login-options {
     grid-template-columns: 1fr;
     gap: 2rem;
+  }
+
+  .signup-options {
+    grid-template-columns: 1fr !important;
   }
 
   .login-option {

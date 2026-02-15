@@ -415,7 +415,7 @@ const Navbar = () => {
                 <h2 className="modal-title">Choose Signup Type</h2>
                 <p className="modal-subtitle">Select your account type to register</p>
 
-                <div className="login-options">
+                <div className="login-options signup-options">
                   <div className="login-option">
                     <div className="login-option-icon rider-icon">
                       <i className="fas fa-id-card"></i>
@@ -423,7 +423,7 @@ const Navbar = () => {
                     <h3>Rider Signup</h3>
                     <p>Register as a driver and start earning</p>
                     <button className="option-btn rider-btn" onClick={handleRiderSignup}>
-                      Signup as Rider
+                      Rider
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
@@ -435,7 +435,7 @@ const Navbar = () => {
                     <h3>Student Signup</h3>
                     <p>Register to track and book shuttle rides</p>
                     <button className="option-btn student-btn" onClick={handleStudentSignup}>
-                      Signup as Student
+                      Student
                       <i className="fas fa-arrow-right"></i>
                     </button>
                   </div>
