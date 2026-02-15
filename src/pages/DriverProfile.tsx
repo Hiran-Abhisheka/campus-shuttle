@@ -13,7 +13,6 @@ const DriverProfile = () => {
     licenseNumber: 'DL123456789',
     vehicleType: 'Bus',
     vehicleNumber: 'BUS 101',
-    vehicleModel: 'Toyota Coaster',
     seats: 45,
     emergencyContact: 'Jane Smith',
     emergencyPhone: '+94 77 987 6543',
@@ -248,201 +247,27 @@ const DriverProfile = () => {
                 <div className="info-grid">
                   <div className="info-item">
                     <label>Driver's License Number</label>
-                    {editingField === 'licenseNumber' ? (
-                      <div className="edit-field">
-                        <input
-                          type="text"
-                          value={profileData.licenseNumber}
-                          onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
-                        />
-                        <div className="field-actions">
-                          <button className="save-field-btn" onClick={() => handleSaveField('licenseNumber')}>
-                            <i className="fas fa-check"></i>
-                          </button>
-                          <button className="cancel-field-btn" onClick={handleCancelEdit}>
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="display-field">
-                        <span>{profileData.licenseNumber}</span>
-                        <button className="edit-field-btn" onClick={() => handleEditField('licenseNumber')}>
-                          <i className="fas fa-edit"></i>
-                        </button>
-                      </div>
-                    )}
+                    <div className="display-field readonly">
+                      <span>{profileData.licenseNumber}</span>
+                    </div>
                   </div>
                   <div className="info-item">
                     <label>Vehicle Type</label>
-                    {editingField === 'vehicleType' ? (
-                      <div className="edit-field">
-                        <select
-                          value={profileData.vehicleType}
-                          onChange={(e) => handleInputChange('vehicleType', e.target.value)}
-                        >
-                          <option value="Bus">Bus</option>
-                          <option value="Minibus">Minibus</option>
-                          <option value="Van">Van</option>
-                        </select>
-                        <div className="field-actions">
-                          <button className="save-field-btn" onClick={() => handleSaveField('vehicleType')}>
-                            <i className="fas fa-check"></i>
-                          </button>
-                          <button className="cancel-field-btn" onClick={handleCancelEdit}>
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="display-field">
-                        <span>{profileData.vehicleType}</span>
-                        <button className="edit-field-btn" onClick={() => handleEditField('vehicleType')}>
-                          <i className="fas fa-edit"></i>
-                        </button>
-                      </div>
-                    )}
+                    <div className="display-field readonly">
+                      <span>{profileData.vehicleType}</span>
+                    </div>
                   </div>
                   <div className="info-item">
                     <label>Vehicle Number</label>
-                    {editingField === 'vehicleNumber' ? (
-                      <div className="edit-field">
-                        <input
-                          type="text"
-                          value={profileData.vehicleNumber}
-                          onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
-                        />
-                        <div className="field-actions">
-                          <button className="save-field-btn" onClick={() => handleSaveField('vehicleNumber')}>
-                            <i className="fas fa-check"></i>
-                          </button>
-                          <button className="cancel-field-btn" onClick={handleCancelEdit}>
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="display-field">
-                        <span>{profileData.vehicleNumber}</span>
-                        <button className="edit-field-btn" onClick={() => handleEditField('vehicleNumber')}>
-                          <i className="fas fa-edit"></i>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="info-item">
-                    <label>Vehicle Model</label>
-                    {editingField === 'vehicleModel' ? (
-                      <div className="edit-field">
-                        <input
-                          type="text"
-                          value={profileData.vehicleModel}
-                          onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
-                        />
-                        <div className="field-actions">
-                          <button className="save-field-btn" onClick={() => handleSaveField('vehicleModel')}>
-                            <i className="fas fa-check"></i>
-                          </button>
-                          <button className="cancel-field-btn" onClick={handleCancelEdit}>
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="display-field">
-                        <span>{profileData.vehicleModel}</span>
-                        <button className="edit-field-btn" onClick={() => handleEditField('vehicleModel')}>
-                          <i className="fas fa-edit"></i>
-                        </button>
-                      </div>
-                    )}
+                    <div className="display-field readonly">
+                      <span>{profileData.vehicleNumber}</span>
+                    </div>
                   </div>
                   <div className="info-item">
                     <label>Number of Seats</label>
-                    {editingField === 'seats' ? (
-                      <div className="edit-field">
-                        <input
-                          type="number"
-                          value={profileData.seats}
-                          onChange={(e) => handleInputChange('seats', e.target.value)}
-                        />
-                        <div className="field-actions">
-                          <button className="save-field-btn" onClick={() => handleSaveField('seats')}>
-                            <i className="fas fa-check"></i>
-                          </button>
-                          <button className="cancel-field-btn" onClick={handleCancelEdit}>
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="display-field">
-                        <span>{profileData.seats} seats</span>
-                        <button className="edit-field-btn" onClick={() => handleEditField('seats')}>
-                          <i className="fas fa-edit"></i>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="info-section">
-                <h4>Emergency Contact</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Emergency Contact Name</label>
-                    {editingField === 'emergencyContact' ? (
-                      <div className="edit-field">
-                        <input
-                          type="text"
-                          value={profileData.emergencyContact}
-                          onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
-                        />
-                        <div className="field-actions">
-                          <button className="save-field-btn" onClick={() => handleSaveField('emergencyContact')}>
-                            <i className="fas fa-check"></i>
-                          </button>
-                          <button className="cancel-field-btn" onClick={handleCancelEdit}>
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="display-field">
-                        <span>{profileData.emergencyContact}</span>
-                        <button className="edit-field-btn" onClick={() => handleEditField('emergencyContact')}>
-                          <i className="fas fa-edit"></i>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="info-item">
-                    <label>Emergency Contact Phone</label>
-                    {editingField === 'emergencyPhone' ? (
-                      <div className="edit-field">
-                        <input
-                          type="tel"
-                          value={profileData.emergencyPhone}
-                          onChange={(e) => handleInputChange('emergencyPhone', e.target.value)}
-                        />
-                        <div className="field-actions">
-                          <button className="save-field-btn" onClick={() => handleSaveField('emergencyPhone')}>
-                            <i className="fas fa-check"></i>
-                          </button>
-                          <button className="cancel-field-btn" onClick={handleCancelEdit}>
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="display-field">
-                        <span>{profileData.emergencyPhone}</span>
-                        <button className="edit-field-btn" onClick={() => handleEditField('emergencyPhone')}>
-                          <i className="fas fa-edit"></i>
-                        </button>
-                      </div>
-                    )}
+                    <div className="display-field readonly">
+                      <span>{profileData.seats} seats</span>
+                    </div>
                   </div>
                 </div>
               </div>
