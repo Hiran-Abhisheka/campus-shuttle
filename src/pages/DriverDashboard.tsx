@@ -52,10 +52,10 @@ const DriverDashboard = () => {
 
   // Route Form state
   const [routeForm, setRouteForm] = useState({
-    startTime: '',
-    endTime: '',
-    startRoute: '',
-    endRoute: ''
+    departureTime: '',
+    arrivalTime: '',
+    startLocation: '',
+    endLocation: ''
   });
 
   const handleSeatClick = (seat: Seat) => {
@@ -97,7 +97,7 @@ const DriverDashboard = () => {
   const handleRouteFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // In a real app, this would save the route to the database
-    alert(`Route updated successfully!\nStart Time: ${routeForm.startTime}\nEnd Time: ${routeForm.endTime}\nStart Route: ${routeForm.startRoute}\nEnd Route: ${routeForm.endRoute}`);
+    alert(`Route updated successfully!\nDeparture Time: ${routeForm.departureTime}\nArrival Time: ${routeForm.arrivalTime}\nStart Location: ${routeForm.startLocation}\nEnd Location: ${routeForm.endLocation}`);
   };
 
   const renderSeat = (seat: Seat) => (
@@ -199,39 +199,39 @@ const DriverDashboard = () => {
             <form className="route-form" onSubmit={handleRouteFormSubmit}>
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="startTime">
-                    <i className="fas fa-clock"></i> Start Time
+                  <label htmlFor="departureTime">
+                    <i className="fas fa-clock"></i> Departure Time
                   </label>
                   <input
                     type="time"
-                    id="startTime"
-                    value={routeForm.startTime}
-                    onChange={(e) => handleRouteFormChange('startTime', e.target.value)}
+                    id="departureTime"
+                    value={routeForm.departureTime}
+                    onChange={(e) => handleRouteFormChange('departureTime', e.target.value)}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="endTime">
-                    <i className="fas fa-clock"></i> End Time
+                  <label htmlFor="arrivalTime">
+                    <i className="fas fa-clock"></i> Arrival Time
                   </label>
                   <input
                     type="time"
-                    id="endTime"
-                    value={routeForm.endTime}
-                    onChange={(e) => handleRouteFormChange('endTime', e.target.value)}
+                    id="arrivalTime"
+                    value={routeForm.arrivalTime}
+                    onChange={(e) => handleRouteFormChange('arrivalTime', e.target.value)}
                     required
                   />
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="startRoute">
-                    <i className="fas fa-map-marker-alt"></i> Start Route
+                  <label htmlFor="startLocation">
+                    <i className="fas fa-map-marker-alt"></i> Start Location
                   </label>
                   <select
-                    id="startRoute"
-                    value={routeForm.startRoute}
-                    onChange={(e) => handleRouteFormChange('startRoute', e.target.value)}
+                    id="startLocation"
+                    value={routeForm.startLocation}
+                    onChange={(e) => handleRouteFormChange('startLocation', e.target.value)}
                     required
                   >
                     <option value="">Select start location</option>
@@ -244,13 +244,13 @@ const DriverDashboard = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="endRoute">
-                    <i className="fas fa-flag-checkered"></i> End Route
+                  <label htmlFor="endLocation">
+                    <i className="fas fa-flag-checkered"></i> End Location
                   </label>
                   <select
-                    id="endRoute"
-                    value={routeForm.endRoute}
-                    onChange={(e) => handleRouteFormChange('endRoute', e.target.value)}
+                    id="endLocation"
+                    value={routeForm.endLocation}
+                    onChange={(e) => handleRouteFormChange('endLocation', e.target.value)}
                     required
                   >
                     <option value="">Select end location</option>
