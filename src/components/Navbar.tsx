@@ -6,8 +6,8 @@ const Navbar = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [loginView, setLoginView] = useState<'select' | 'driver' | 'student'>('select');
-  const [signupView, setSignupView] = useState<'select' | 'driver' | 'student'>('select');
+  const [loginView, setLoginView] = useState<'select' | 'driver' | 'student' | 'admin'>('select');
+  const [signupView, setSignupView] = useState<'select' | 'driver' | 'student' | 'admin'>('select');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userType, setUserType] = useState<'student' | 'driver' | 'admin' | null>(null);
   const navigate = useNavigate();
@@ -30,19 +30,24 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    const userSession = localStorage.getItem('userSession');
     const studentLoggedIn = localStorage.getItem('studentLoggedIn');
     const driverLoggedIn = localStorage.getItem('driverLoggedIn');
+    const driverSession = localStorage.getItem('driverSession');
     const adminLoggedIn = localStorage.getItem('adminLoggedIn');
     
-    if (studentLoggedIn === 'true') {
-      setIsLoggedIn(true);
-      setUserType('student');
-    } else if (driverLoggedIn === 'true') {
+    if (driverLoggedIn === 'true' || driverSession) {
       setIsLoggedIn(true);
       setUserType('driver');
+    } else if (userSession || studentLoggedIn === 'true') {
+      setIsLoggedIn(true);
+      setUserType('student');
     } else if (adminLoggedIn === 'true') {
       setIsLoggedIn(true);
       setUserType('admin');
+    } else {
+      setIsLoggedIn(false);
+      setUserType(null);
     }
   }, [location.pathname]);
 
@@ -111,50 +116,55 @@ const Navbar = () => {
 
   return (
     <>
+
       <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
         <div className="navbar-container">
-          <Link to="/" className="nav-logo">
+          <div className="nav-logo" style={{ cursor: 'default', pointerEvents: 'none', userSelect: 'none' }}>
             <i className="fas fa-bus"></i>
             <span>Campus Shuttle</span>
-          </Link>
+          </div>
           <button className="mobile-menu-icon" onClick={toggleMobileMenu}>
             <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
           </button>
           <div className={`nav-links ${mobileMenuOpen ? 'mobile-active' : ''}`}>
-            {(isLoggedIn && userType === 'student') && (location.pathname === '/student-dashboard' || location.pathname === '/contact' || location.pathname === '/student-profile' || location.pathname === '/shuttle-booking') ? (
+            {isLoggedIn ? (
               <>
-                <Link to="/student-dashboard" className="nav-link" onClick={closeMobileMenu}>Ride</Link>
-                <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
-                <a href="#message" className="nav-link" onClick={closeMobileMenu}>Message</a>
-                <Link to="/student-profile" className="nav-button" onClick={closeMobileMenu}>
-                  <i className="fas fa-user-circle"></i> Profile
-                </Link>
-              </>
-            ) : (isLoggedIn && userType === 'driver') && (location.pathname === '/driver-dashboard' || location.pathname === '/contact') ? (
-              <>
-                <Link to="/driver-dashboard" className="nav-link" onClick={closeMobileMenu}>Dashboard</Link>
-                <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
-                <a href="#message" className="nav-link" onClick={closeMobileMenu}>Message</a>
-                <Link to="/driver-profile" className="nav-button" onClick={closeMobileMenu}>
-                  <i className="fas fa-user-circle"></i> Profile
-                </Link>
-              </>
-            ) : (isLoggedIn && userType === 'admin') && (location.pathname === '/admin-dashboard' || location.pathname === '/contact') ? (
-              <>
-                <Link to="/admin-dashboard" className="nav-link" onClick={closeMobileMenu}>Admin Dashboard</Link>
-                <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
-                <a href="#message" className="nav-link" onClick={closeMobileMenu}>Message</a>
-                <Link to="/admin-profile" className="nav-button" onClick={closeMobileMenu}>
-                  <i className="fas fa-user-shield"></i> Admin Profile
-                </Link>
+                {userType === 'student' && (
+                  <>
+                    <Link to="/student-dashboard" className="nav-link" onClick={closeMobileMenu}>Home</Link>
+                    <Link to="/about" className="nav-link" onClick={closeMobileMenu}>About Us</Link>
+                    <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
+                    <Link to="/student-profile" className="nav-button" onClick={closeMobileMenu}>
+                      <i className="fas fa-user-circle"></i> Profile
+                    </Link>
+                  </>
+                )}
+                {userType === 'driver' && (
+                  <>
+                    <Link to="/driver-dashboard" className="nav-link" onClick={closeMobileMenu}>Home</Link>
+                    <Link to="/about" className="nav-link" onClick={closeMobileMenu}>About Us</Link>
+                    <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
+                    <Link to="/driver-profile" className="nav-button" onClick={closeMobileMenu}>
+                      <i className="fas fa-user-circle"></i> Profile
+                    </Link>
+                  </>
+                )}
+                {userType === 'admin' && (
+                  <>
+                    <Link to="/admin-dashboard" className="nav-link" onClick={closeMobileMenu}>Admin Dashboard</Link>
+                    <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>Contact</Link>
+                    <a href="#message" className="nav-link" onClick={closeMobileMenu}>Message</a>
+                    <Link to="/admin-profile" className="nav-button" onClick={closeMobileMenu}>
+                      <i className="fas fa-user-shield"></i> Admin Profile
+                    </Link>
+                  </>
+                )}
               </>
             ) : (
               <>
                 <a href="#home" className="nav-link" onClick={closeMobileMenu}>Home</a>
                 <a href="#about" className="nav-link" onClick={closeMobileMenu}>About Us</a>
                 <a href="#contact" className="nav-link" onClick={closeMobileMenu}>Contact</a>
-                <Link to="/download" className="nav-link" onClick={closeMobileMenu}>Download</Link>
-                <button onClick={(e) => { handleLoginClick(e); closeMobileMenu(); }} className="nav-button">Login</button>
               </>
             )}
           </div>
@@ -428,7 +438,7 @@ const Navbar = () => {
                       <i className="fas fa-graduation-cap"></i>
                     </div>
                     <h3>Student Signup</h3>
-                    <p>Register to track and book shuttle rides</p>
+                    <p>Register as a student to book rides</p>
                     <button className="option-btn student-btn" onClick={handleStudentSignup}>
                       Student
                       <i className="fas fa-arrow-right"></i>

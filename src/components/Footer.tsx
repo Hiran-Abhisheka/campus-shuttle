@@ -232,7 +232,7 @@ const Footer = () => {
                     <i className="fas fa-graduation-cap"></i>
                   </div>
                   <h3>Student Signup</h3>
-                  <p>Register to track and book shuttle rides</p>
+                  <p>Register as a student to book rides</p>
                   <button className="option-btn student-btn" onClick={handleStudentSignupClick}>
                     Student
                     <i className="fas fa-arrow-right"></i>

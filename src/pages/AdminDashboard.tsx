@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
+import * as XLSX from 'xlsx';
 
 interface Driver {
   id: number;
@@ -42,7 +45,87 @@ interface EmergencyReport {
 }
 
 const AdminDashboard = () => {
-  const [activeSection, setActiveSection] = useState<'overview' | 'drivers' | 'students' | 'emergencies' | 'analytics'>('overview');
+    const [totalBookings, setTotalBookings] = useState<number>(0);
+
+    // Fetch total bookings (optionally, for this month only)
+    useEffect(() => {
+      const fetchTotalBookings = async () => {
+        // For all-time bookings:
+        // const { count, error } = await supabase.from('booking').select('*', { count: 'exact', head: true });
+
+        // For bookings only in the current month:
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const fromDate = firstDay.toISOString().split('T')[0];
+        const toDate = lastDay.toISOString().split('T')[0];
+        const { count, error } = await supabase
+          .from('booking')
+          .select('*', { count: 'exact', head: true })
+          .gte('trip_date', fromDate)
+          .lte('trip_date', toDate);
+        if (!error && typeof count === 'number') {
+          setTotalBookings(count);
+        } else {
+          setTotalBookings(0);
+        }
+      };
+      fetchTotalBookings();
+    }, []);
+  const [activeSection, setActiveSection] = useState<'overview' | 'drivers' | 'students' | 'routes' | 'emergencies' | 'analytics'>('overview');
+    // Shuttle Route State
+    const [routes, setRoutes] = useState<any[]>([]);
+    const [routesLoading, setRoutesLoading] = useState(true);
+    const [routesError, setRoutesError] = useState('');
+    const [showRouteModal, setShowRouteModal] = useState(false);
+    const [editingRoute, setEditingRoute] = useState<any>(null);
+    const [routeForm, setRouteForm] = useState<any>({});
+    const [routeActionLoading, setRouteActionLoading] = useState(false);
+    const [routeSuccess, setRouteSuccess] = useState("");
+
+    useEffect(() => {
+      const fetchRoutes = async () => {
+        setRoutesLoading(true);
+        setRoutesError('');
+        const { data, error } = await supabase.from('shuttle_route').select('*');
+        if (error) {
+          setRoutesError('Failed to fetch routes');
+          setRoutesLoading(false);
+          return;
+        }
+        setRoutes(data || []);
+        setRoutesLoading(false);
+      };
+      fetchRoutes();
+    }, []);
+
+    const handleRouteFormChange = (e: any) => {
+      setRouteForm({ ...routeForm, [e.target.name]: e.target.value });
+    };
+
+    const handleRouteSubmit = async (e: any) => {
+      e.preventDefault();
+      setRouteActionLoading(true);
+      let success = false;
+      if (editingRoute) {
+        const { error } = await supabase.from('shuttle_route').update({ price_per_seat: routeForm.price_per_seat }).eq('shuttle_route_id', editingRoute.shuttle_route_id);
+        success = !error;
+      } else {
+        const { error } = await supabase.from('shuttle_route').insert([{ ...routeForm }]);
+        success = !error;
+      }
+      setRouteActionLoading(false);
+      if (success) {
+        setRouteSuccess("Saved successfully!");
+        setTimeout(() => setRouteSuccess(""), 2000);
+        setShowRouteModal(false);
+        setEditingRoute(null);
+        setRouteForm({});
+      }
+      // Refresh
+      const { data } = await supabase.from('shuttle_route').select('*');
+      setRoutes(data || []);
+    };
   const [passwordVisibility, setPasswordVisibility] = useState<{[key: number]: boolean}>({});
   const [driverPasswordVisibility, setDriverPasswordVisibility] = useState<{[key: number]: boolean}>({});
   const [driverSearchTerm, setDriverSearchTerm] = useState('');
@@ -62,112 +145,158 @@ const AdminDashboard = () => {
     }));
   };
 
-  // Mock data - in real app this would come from API
-  const [drivers] = useState<Driver[]>([
-    {
-      id: 1,
-      name: 'John Smith',
-      email: 'john@shuttle.com',
-      phone: '+94 77 123 4567',
-      status: 'active',
-      totalTrips: 145,
-      licenseNumber: 'DL123456789',
-      vehicleType: 'Bus',
-      vehicleNumber: 'BUS 101',
-      seats: 45,
-      joinDate: '2023-08-15',
-      rating: 4.8
-    },
-    {
-      id: 2,
-      name: 'Sarah Johnson',
-      email: 'sarah@shuttle.com',
-      phone: '+94 77 234 5678',
-      status: 'active',
-      totalTrips: 132,
-      licenseNumber: 'DL987654321',
-      vehicleType: 'Minibus',
-      vehicleNumber: 'BUS 102',
-      seats: 25,
-      joinDate: '2023-09-20',
-      rating: 4.9
-    },
-    {
-      id: 3,
-      name: 'Mike Davis',
-      email: 'mike@shuttle.com',
-      phone: '+94 77 345 6789',
-      status: 'inactive',
-      totalTrips: 98,
-      licenseNumber: 'DL456789123',
-      vehicleType: 'Bus',
-      vehicleNumber: 'BUS 103',
-      seats: 50,
-      joinDate: '2023-07-10',
-      rating: 4.6
-    },
-  ]);
+  // Real data from Supabase
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [driversLoading, setDriversLoading] = useState(true);
+  const [driversError, setDriversError] = useState('');
 
-  const [students] = useState<Student[]>([
-    {
-      id: 1,
-      username: 'alexchen',
-      fullName: 'Alex Chen',
-      email: 'alex@student.edu',
-      mobile: '+94 77 456 7890',
-      university: 'University of Colombo',
-      homeAddress: '123 Main Street, Colombo',
-      parentName: 'Mr. Chen',
-      parentEmail: 'parent.chen@email.com',
-      parentPhone: '+94 77 456 7890',
-      totalBookings: 23,
-      status: 'active',
-      joinDate: '2024-01-15'
-    },
-    {
-      id: 2,
-      username: 'emmawilson',
-      fullName: 'Emma Wilson',
-      email: 'emma@student.edu',
-      mobile: '+94 77 567 8901',
-      university: 'University of Peradeniya',
-      homeAddress: '456 Oak Avenue, Kandy',
-      parentName: 'Mrs. Wilson',
-      parentEmail: 'parent.wilson@email.com',
-      parentPhone: '+94 77 567 8901',
-      totalBookings: 31,
-      status: 'active',
-      joinDate: '2024-02-01'
-    },
-    {
-      id: 3,
-      username: 'ryanbrown',
-      fullName: 'Ryan Brown',
-      email: 'ryan@student.edu',
-      mobile: '+94 77 678 9012',
-      university: 'University of Moratuwa',
-      homeAddress: '789 Pine Road, Moratuwa',
-      parentName: 'Mr. Brown',
-      parentEmail: 'parent.brown@email.com',
-      parentPhone: '+94 77 678 9012',
-      totalBookings: 18,
-      status: 'active',
-      joinDate: '2023-12-10'
-    },
-  ]);
+  useEffect(() => {
+    const fetchDrivers = async () => {
+      setDriversLoading(true);
+      setDriversError('');
+      // Join users and driver tables
+      const { data, error } = await supabase
+        .from('driver')
+        .select(`
+          user_id,
+          license_no,
+          vehicle_type,
+          vehicle_number,
+          number_of_seats,
+          users:users(user_id, full_name, email, phone_no, status, created_at)
+        `);
+      if (error) {
+        setDriversError('Failed to fetch drivers');
+        setDriversLoading(false);
+        return;
+      }
+      // Map to Driver interface
+      const mapped = (data || []).map((d: any) => ({
+        id: d.user_id,
+        name: d.users?.full_name || '',
+        email: d.users?.email || '',
+        phone: d.users?.phone_no || '',
+        status: (d.users?.status || 'inactive').toLowerCase(),
+        totalTrips: 0, // You can fetch trip count if available
+        licenseNumber: d.license_no,
+        vehicleType: d.vehicle_type,
+        vehicleNumber: d.vehicle_number,
+        seats: d.number_of_seats,
+        joinDate: d.users?.created_at ? d.users.created_at.split('T')[0] : '',
+        rating: 0 // You can fetch rating if available
+      }));
+      setDrivers(mapped);
+      setDriversLoading(false);
+    };
+    fetchDrivers();
+  }, []);
 
-  const [emergencies] = useState<EmergencyReport[]>([
-    { id: 1, driverName: 'John Smith', busNumber: 'BUS 101', emergencyType: 'Tire Punch', location: 'Nugegoda', timestamp: '2024-02-14 10:30 AM', status: 'resolved' },
-    { id: 2, driverName: 'Sarah Johnson', busNumber: 'BUS 102', emergencyType: 'Medical Emergency', location: 'Rajagiriya', timestamp: '2024-02-14 11:15 AM', status: 'in_progress' },
-    { id: 3, driverName: 'Mike Davis', busNumber: 'BUS 103', emergencyType: 'Engine Issue', location: 'Moratuwa', timestamp: '2024-02-14 09:45 AM', status: 'pending' },
-  ]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(true);
+  const [studentsError, setStudentsError] = useState('');
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setStudentsLoading(true);
+      setStudentsError('');
+      // Join users and student tables
+      const { data, error } = await supabase
+        .from('student')
+        .select(`
+          user_id,
+          university,
+          home_address,
+          parent_name,
+          parent_email,
+          parent_phone_no,
+          users:users(user_id, username, full_name, email, phone_no, status, created_at)
+        `);
+      if (error) {
+        setStudentsError('Failed to fetch students');
+        setStudentsLoading(false);
+        return;
+      }
+      // Map to Student interface
+      const mapped = (data || []).map((s: any) => ({
+        id: s.user_id,
+        username: s.users?.username || '',
+        fullName: s.users?.full_name || '',
+        email: s.users?.email || '',
+        mobile: s.users?.phone_no || '',
+        university: s.university,
+        homeAddress: s.home_address,
+        parentName: s.parent_name,
+        parentEmail: s.parent_email,
+        parentPhone: s.parent_phone_no,
+        totalBookings: 0, // You can fetch booking count if available
+        status: (s.users?.status || 'inactive').toLowerCase(),
+        joinDate: s.users?.created_at ? s.users.created_at.split('T')[0] : ''
+      }));
+      setStudents(mapped);
+      setStudentsLoading(false);
+    };
+    fetchStudents();
+  }, []);
+
+  const [emergencies, setEmergencies] = useState<EmergencyReport[]>([]);
+  const [emergenciesLoading, setEmergenciesLoading] = useState(true);
+  const [emergenciesError, setEmergenciesError] = useState('');
+
+  useEffect(() => {
+    const fetchEmergencies = async () => {
+      setEmergenciesLoading(true);
+      setEmergenciesError('');
+      // Join emergency_report, driver, users, and shuttle_route tables
+      const { data, error } = await supabase
+        .from('emergency_report')
+        .select(`
+          emergency_id,
+          emergency_type,
+          location_name,
+          reported_time,
+          status,
+          driver:driver_id (user_id, users:users(user_id, full_name)),
+          shuttle_route:shuttle_route_id (bus_number)
+        `)
+        .order('reported_time', { ascending: false });
+      if (error) {
+        setEmergenciesError('Failed to fetch emergency reports');
+        setEmergenciesLoading(false);
+        return;
+      }
+      // Map to EmergencyReport interface
+      const mapped = (data || []).map((e: any) => ({
+        id: e.emergency_id,
+        driverName: e.driver?.users?.full_name || 'Unknown',
+        busNumber: e.shuttle_route?.bus_number || 'Unknown',
+        emergencyType: formatEmergencyType(e.emergency_type),
+        location: e.location_name,
+        timestamp: new Date(e.reported_time).toLocaleString(),
+        status: (e.status || 'pending').toLowerCase(),
+      }));
+      setEmergencies(mapped);
+      setEmergenciesLoading(false);
+    };
+    fetchEmergencies();
+  }, []);
+
+  function formatEmergencyType(type: string) {
+    switch (type) {
+      case 'TIRE_PUNCH': return 'Tire Punch';
+      case 'ENGINE_ISSUE': return 'Engine Issue';
+      case 'MEDICAL_EMERGENCY': return 'Medical Emergency';
+      case 'ACCIDENT': return 'Accident';
+      case 'OTHER': return 'Other Emergency';
+      default: return type;
+    }
+  }
 
   const stats = {
     totalDrivers: drivers.length,
     activeDrivers: drivers.filter(d => d.status === 'active').length,
     totalStudents: students.length,
     activeStudents: students.filter(s => s.status === 'active').length,
-    totalBookings: students.reduce((sum, s) => sum + s.totalBookings, 0),
+    totalBookings: totalBookings,
     pendingEmergencies: emergencies.filter(e => e.status === 'pending').length,
     resolvedEmergencies: emergencies.filter(e => e.status === 'resolved').length,
   };
@@ -261,7 +390,6 @@ const AdminDashboard = () => {
             onChange={(e) => setDriverSearchTerm(e.target.value)}
             className="search-input"
           />
-          <button className="btn-primary">Add New Driver</button>
         </div>
       </div>
       <div className="driver-cards">
@@ -289,16 +417,7 @@ const AdminDashboard = () => {
               </div>
               <div className="detail-row">
                 <span>Password:</span>
-                <div className="password-field">
-                  <span>{driverPasswordVisibility[driver.id] ? 'password123' : '••••••••'}</span>
-                  <button
-                    className="eye-icon"
-                    onClick={() => toggleDriverPasswordVisibility(driver.id)}
-                    title={driverPasswordVisibility[driver.id] ? 'Hide password' : 'Show password'}
-                  >
-                    {driverPasswordVisibility[driver.id] ? '👁️' : '🙈'}
-                  </button>
-                </div>
+                <span>••••••••</span>
               </div>
               <div className="detail-row">
                 <span>Driver's License Number:</span>
@@ -325,10 +444,7 @@ const AdminDashboard = () => {
                 <span>{driver.seats}</span>
               </div>
             </div>
-            <div className="driver-actions">
-              <button className="btn-secondary">View Details</button>
-              <button className="btn-danger">Deactivate</button>
-            </div>
+            {/* Edit/Delete actions removed as per requirements */}
           </div>
         ))}
       </div>
@@ -347,7 +463,6 @@ const AdminDashboard = () => {
             onChange={(e) => setStudentSearchTerm(e.target.value)}
             className="search-input"
           />
-          <button className="btn-primary">Add New Student</button>
         </div>
       </div>
       <div className="student-cards">
@@ -416,13 +531,139 @@ const AdminDashboard = () => {
                 <span>{student.totalBookings}</span>
               </div>
             </div>
-            <div className="student-actions">
-              <button className="btn-secondary">View Details</button>
-              <button className="btn-danger">Deactivate</button>
-            </div>
+            {/* Edit/Delete actions removed as per requirements */}
           </div>
         ))}
       </div>
+    </div>
+  );
+  // Shuttle Routes Section
+  const [routeSearchTerm, setRouteSearchTerm] = useState("");
+  const renderRoutes = () => (
+    <div className="routes-content">
+      <div className="content-header">
+        <h2>Shuttle Routes</h2>
+        <div className="header-actions">
+          <input
+            type="text"
+            placeholder="Search routes by bus number, start, end..."
+            value={routeSearchTerm}
+            onChange={e => setRouteSearchTerm(e.target.value)}
+            className="search-input"
+            style={{padding:'8px 12px',borderRadius:6,border:'1px solid #ccc',fontSize:'1rem',minWidth:220}}
+          />
+        </div>
+      </div>
+      {routesLoading ? <p>Loading...</p> : routesError ? <p style={{color:'red'}}>{routesError}</p> : (
+        <div className="route-cards">
+          {routes.filter(route =>
+            (route.bus_number || '').toLowerCase().includes(routeSearchTerm.toLowerCase()) ||
+            (route.start_location || '').toLowerCase().includes(routeSearchTerm.toLowerCase()) ||
+            (route.end_location || '').toLowerCase().includes(routeSearchTerm.toLowerCase())
+          ).map(route => (
+            <div key={route.shuttle_route_id} className="route-card">
+              <div><b>Bus Number:</b> {route.bus_number}</div>
+              <div><b>From:</b> {route.start_location}</div>
+              <div><b>To:</b> {route.end_location}</div>
+              <div><b>Departure:</b> {route.departure_time}</div>
+              <div><b>Arrival:</b> {route.arrival_time}</div>
+              <div><b>Duration:</b> {route.duration_minutes} min</div>
+              <div><b>Stops:</b> {route.number_of_stops}</div>
+              <div><b>Total Seats:</b> {route.total_seats}</div>
+              <div><b>Price per Seat:</b> Rs. {route.price_per_seat}
+                <button className="btn-secondary" style={{marginLeft:8}} onClick={() => { setEditingRoute(route); setRouteForm({ price_per_seat: route.price_per_seat }); setShowRouteModal(true); }}>Edit</button>
+              </div>
+              <div><b>Status:</b> {route.status}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Route Modal */}
+      {showRouteModal && (
+        <div className="modal-overlay popup-overlay">
+          <div className="modal popup-modal">
+            {routeSuccess && (
+              <div style={{background:'#38a169',color:'#fff',padding:'10px 18px',borderRadius:8,marginBottom:16,textAlign:'center',fontWeight:600,boxShadow:'0 2px 8px rgba(56,161,105,0.15)'}}>
+                {routeSuccess}
+              </div>
+            )}
+            {editingRoute ? (
+              <>
+                <h2>Edit Price for Route: <span style={{color:'#8417BA'}}>{editingRoute.bus_number}</span></h2>
+                <div style={{marginBottom: '1rem', background:'#f7fafc', padding:'1rem', borderRadius:'8px'}}>
+                  <div><b>Bus Number:</b> {editingRoute.bus_number}</div>
+                  <div><b>From:</b> {editingRoute.start_location}</div>
+                  <div><b>To:</b> {editingRoute.end_location}</div>
+                  <div><b>Departure:</b> {editingRoute.departure_time}</div>
+                  <div><b>Arrival:</b> {editingRoute.arrival_time}</div>
+                  <div><b>Duration:</b> {editingRoute.duration_minutes} min</div>
+                  <div><b>Total Seats:</b> {editingRoute.total_seats}</div>
+                </div>
+                <form onSubmit={handleRouteSubmit}>
+                  <label style={{fontWeight:'bold', marginBottom:4, display:'block'}}>Price per Seat</label>
+                  <div style={{position:'relative', marginBottom:'1.5rem'}}>
+                    <span style={{
+                      position: 'absolute',
+                      left: 14,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#8417BA',
+                      fontSize: '1.2rem',
+                      pointerEvents: 'none'
+                    }}>₨</span>
+                    <input
+                      name="price_per_seat"
+                      placeholder="Enter amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={routeForm.price_per_seat || ''}
+                      onChange={handleRouteFormChange}
+                      required
+                      style={{
+                        width:'100%',
+                        padding:'12px 12px 12px 38px',
+                        fontSize:'1.25rem',
+                        border:'2px solid #e2e8f0',
+                        borderRadius:'8px',
+                        outline:'none',
+                        fontWeight:'600',
+                        color:'#2d3748',
+                        boxSizing:'border-box',
+                        transition:'border-color 0.2s',
+                      }}
+                      onFocus={e => e.target.style.borderColor = '#8417BA'}
+                      onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                    />
+                  </div>
+                  <button type="submit" className="btn-primary" disabled={routeActionLoading} style={{marginRight:8}}>{routeActionLoading ? 'Saving...' : 'Save'}</button>
+                  <button type="button" className="btn-secondary" onClick={() => setShowRouteModal(false)}>Cancel</button>
+                </form>
+              </>
+            ) : (
+              <>
+                <h2>Add New Shuttle Route</h2>
+                <form onSubmit={handleRouteSubmit}>
+                  <input name="bus_number" placeholder="Bus Number" value={routeForm.bus_number || ''} onChange={handleRouteFormChange} required />
+                  <input name="start_location" placeholder="Start Location" value={routeForm.start_location || ''} onChange={handleRouteFormChange} required />
+                  <input name="end_location" placeholder="End Location" value={routeForm.end_location || ''} onChange={handleRouteFormChange} required />
+                  <input name="departure_time" placeholder="Departure Time (HH:MM:SS)" value={routeForm.departure_time || ''} onChange={handleRouteFormChange} required />
+                  <input name="arrival_time" placeholder="Arrival Time (HH:MM:SS)" value={routeForm.arrival_time || ''} onChange={handleRouteFormChange} required />
+                  <input name="duration_minutes" placeholder="Duration (min)" type="number" value={routeForm.duration_minutes || ''} onChange={handleRouteFormChange} required />
+                  <input name="number_of_stops" placeholder="Number of Stops" type="number" value={routeForm.number_of_stops || ''} onChange={handleRouteFormChange} required />
+                  <input name="total_seats" placeholder="Total Seats" type="number" value={routeForm.total_seats || ''} onChange={handleRouteFormChange} required />
+                  <input name="price_per_seat" placeholder="Price per Seat" type="number" value={routeForm.price_per_seat || ''} onChange={handleRouteFormChange} required />
+                  <input name="status" placeholder="Status" value={routeForm.status || ''} onChange={handleRouteFormChange} required />
+                  <input name="driver_id" placeholder="Driver ID" value={routeForm.driver_id || ''} onChange={handleRouteFormChange} required />
+                  <button type="submit" className="btn-primary" disabled={routeActionLoading} style={{marginRight:8}}>{routeActionLoading ? 'Saving...' : 'Save'}</button>
+                  <button type="button" className="btn-secondary" onClick={() => setShowRouteModal(false)}>Cancel</button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -462,6 +703,87 @@ const AdminDashboard = () => {
     </div>
   );
 
+
+  // --- Analytics State ---
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const [totalTrips, setTotalTrips] = useState<number>(0);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<{month: string, value: number}[]>([]);
+  // User Growth State
+  const [newStudents, setNewStudents] = useState<number>(0);
+  const [newDrivers, setNewDrivers] = useState<number>(0);
+  const [activeUsersPercent, setActiveUsersPercent] = useState<number>(0);
+  useEffect(() => {
+    // Fetch total revenue, total trips, monthly revenue, and user growth
+    const fetchAnalytics = async () => {
+      // Total Revenue: sum of all booking total_amount
+      const { data: revenueData, error: revenueError } = await supabase
+        .from('booking')
+        .select('total_amount, booking_date_time');
+      if (!revenueError && Array.isArray(revenueData)) {
+        const sum = revenueData.reduce((acc, curr) => acc + (parseFloat(curr.total_amount) || 0), 0);
+        setTotalRevenue(sum);
+        // Monthly revenue aggregation
+        const monthly: {[key: string]: number} = {};
+        revenueData.forEach((row) => {
+          const date = new Date(row.booking_date_time);
+          const month = date.toLocaleString('default', { month: 'short', year: '2-digit' });
+          monthly[month] = (monthly[month] || 0) + (parseFloat(row.total_amount) || 0);
+        });
+        // Sort months chronologically
+        const sorted = Object.entries(monthly)
+          .sort((a, b) => {
+            const [ma, ya] = a[0].split(' ');
+            const [mb, yb] = b[0].split(' ');
+            const da = new Date(`20${ya}`, new Date(Date.parse(ma + ' 1, 2000')).getMonth());
+            const db = new Date(`20${yb}`, new Date(Date.parse(mb + ' 1, 2000')).getMonth());
+            return da.getTime() - db.getTime();
+          })
+          .map(([month, value]) => ({ month, value }));
+        setMonthlyRevenue(sorted);
+      } else {
+        setTotalRevenue(0);
+        setMonthlyRevenue([]);
+      }
+      // Total Trips: count of all bookings
+      const { count, error: tripsError } = await supabase
+        .from('booking')
+        .select('*', { count: 'exact', head: true });
+      if (!tripsError && typeof count === 'number') {
+        setTotalTrips(count);
+      } else {
+        setTotalTrips(0);
+      }
+
+      // User Growth: new students and drivers in the last 30 days
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+      const lastMonthISO = lastMonth.toISOString();
+      // New Students
+      const { count: newStudentCount } = await supabase
+        .from('student')
+        .select('user_id', { count: 'exact', head: true })
+        .gte('created_at', lastMonthISO);
+      setNewStudents(typeof newStudentCount === 'number' ? newStudentCount : 0);
+      // New Drivers
+      const { count: newDriverCount } = await supabase
+        .from('driver')
+        .select('user_id', { count: 'exact', head: true })
+        .gte('created_at', lastMonthISO);
+      setNewDrivers(typeof newDriverCount === 'number' ? newDriverCount : 0);
+      // Active Users: users with status 'active' / total users
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('status');
+      if (Array.isArray(usersData) && usersData.length > 0) {
+        const active = usersData.filter(u => (u.status || '').toLowerCase() === 'active').length;
+        setActiveUsersPercent(Math.round((active / usersData.length) * 1000) / 10); // 1 decimal
+      } else {
+        setActiveUsersPercent(0);
+      }
+    };
+    fetchAnalytics();
+  }, []);
+
   const renderAnalytics = () => (
     <div className="analytics-content">
       <div className="analytics-header">
@@ -481,28 +803,19 @@ const AdminDashboard = () => {
         <div className="metric-card">
           <div className="metric-icon">💰</div>
           <div className="metric-info">
-            <h3>$12,450</h3>
+            <h3>Rs. {totalRevenue.toLocaleString()}</h3>
             <p>Total Revenue</p>
-            <span className="metric-change positive">+12.5%</span>
           </div>
         </div>
         <div className="metric-card">
           <div className="metric-icon">📈</div>
           <div className="metric-info">
-            <h3>1,247</h3>
+            <h3>{totalTrips.toLocaleString()}</h3>
             <p>Total Trips</p>
-            <span className="metric-change positive">+8.2%</span>
-          </div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-icon">⚡</div>
-          <div className="metric-info">
-            <h3>94.2%</h3>
-            <p>On-Time Rate</p>
-            <span className="metric-change positive">+2.1%</span>
           </div>
         </div>
       </div>
+
 
       {/* Charts Row */}
       <div className="charts-grid">
@@ -510,154 +823,116 @@ const AdminDashboard = () => {
           <h3>📊 Revenue Trends</h3>
           <div className="revenue-chart">
             <div className="chart-area">
-              <div className="revenue-bar" style={{height: '60%'}} data-month="Jan" data-value="$2,100"></div>
-              <div className="revenue-bar" style={{height: '75%'}} data-month="Feb" data-value="$2,625"></div>
-              <div className="revenue-bar" style={{height: '85%'}} data-month="Mar" data-value="$2,975"></div>
-              <div className="revenue-bar" style={{height: '70%'}} data-month="Apr" data-value="$2,450"></div>
-              <div className="revenue-bar" style={{height: '90%'}} data-month="May" data-value="$3,150"></div>
-              <div className="revenue-bar" style={{height: '95%'}} data-month="Jun" data-value="$3,325"></div>
+              {monthlyRevenue.length === 0 ? (
+                <div style={{padding:'2rem',textAlign:'center',color:'#888'}}>No revenue data</div>
+              ) : (
+                monthlyRevenue.map((item, idx) => {
+                  // Find max for scaling
+                  const max = Math.max(...monthlyRevenue.map(m => m.value));
+                  const height = max > 0 ? Math.round((item.value / max) * 90) : 0;
+                  return (
+                    <div
+                      key={item.month}
+                      className="revenue-bar"
+                      style={{height: `${height}%`}}
+                      data-month={item.month}
+                      data-value={`Rs. ${item.value.toLocaleString()}`}
+                      title={`Rs. ${item.value.toLocaleString()}`}
+                    ></div>
+                  );
+                })
+              )}
             </div>
             <div className="chart-labels">
-              <span>Jan</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-              <span>Jun</span>
+              {monthlyRevenue.map(item => (
+                <span key={item.month}>{item.month}</span>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="chart-card">
-          <h3>🚐 Trip Distribution</h3>
-          <div className="pie-chart-container">
-            <svg viewBox="0 0 200 200" className="pie-svg">
-              {/* Morning - 45% */}
-              <circle
-                cx="100"
-                cy="100"
-                r="80"
-                fill="none"
-                stroke="#2ECC71"
-                strokeWidth="40"
-                strokeDasharray="226 0"
-                strokeDashoffset="0"
-                transform="rotate(-90 100 100)"
-              />
-              {/* Afternoon - 35% */}
-              <circle
-                cx="100"
-                cy="100"
-                r="80"
-                fill="none"
-                stroke="#F1C40F"
-                strokeWidth="40"
-                strokeDasharray="157 69"
-                strokeDashoffset="-226"
-                transform="rotate(-90 100 100)"
-              />
-              {/* Evening - 20% */}
-              <circle
-                cx="100"
-                cy="100"
-                r="80"
-                fill="none"
-                stroke="#E74C3C"
-                strokeWidth="40"
-                strokeDasharray="113 113"
-                strokeDashoffset="-383"
-                transform="rotate(-90 100 100)"
-              />
-            </svg>
-            <div className="pie-legend">
-              <div className="legend-item">
-                <div className="legend-color" style={{background: '#2ECC71'}}></div>
-                <span>Morning (45%)</span>
-              </div>
-              <div className="legend-item">
-                <div className="legend-color" style={{background: '#F1C40F'}}></div>
-                <span>Afternoon (35%)</span>
-              </div>
-              <div className="legend-item">
-                <div className="legend-color" style={{background: '#E74C3C'}}></div>
-                <span>Evening (20%)</span>
-              </div>
-            </div>
-          </div>
-        </div>
+
       </div>
 
       {/* Bottom Row */}
       <div className="bottom-analytics">
         <div className="analytics-card">
           <h3>🏆 Top Performing Drivers</h3>
-          <div className="top-drivers">
+          <div className="top-drivers-grid">
             {drivers.slice(0, 5).map((driver, index) => (
-              <div key={driver.id} className="driver-rank">
-                <div className="rank-number">#{index + 1}</div>
-                <div className="driver-details">
-                  <span className="driver-name">{driver.name}</span>
-                  <span className="driver-stats">{driver.totalTrips} trips</span>
+              <div key={driver.id} className="driver-rank-card">
+                <div className="driver-rank-header">
+                  <div className="driver-avatar-circle">{driver.name ? driver.name.charAt(0).toUpperCase() : '?'}</div>
+                  <div className="driver-rank-number">#{index + 1}</div>
+                  <div className="driver-rank-badge">{index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'}</div>
                 </div>
-                <div className="rank-badge">{index < 3 ? '🥇🥈🥉'[index] : '🏅'}</div>
+                <div className="driver-rank-info">
+                  <span className="driver-rank-name">{driver.name}</span>
+                  <span className="driver-rank-trips">{driver.totalTrips} trips</span>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="analytics-card">
-          <h3>📍 Popular Routes</h3>
-          <div className="popular-routes">
-            <div className="route-item">
-              <div className="route-path">
-                <span className="route-from">Colombo</span>
-                <span className="route-arrow">→</span>
-                <span className="route-to">Kandy</span>
-              </div>
-              <div className="route-stats">234 trips • 45% of total</div>
-            </div>
-            <div className="route-item">
-              <div className="route-path">
-                <span className="route-from">Colombo</span>
-                <span className="route-arrow">→</span>
-                <span className="route-to">Moratuwa</span>
-              </div>
-              <div className="route-stats">189 trips • 32% of total</div>
-            </div>
-            <div className="route-item">
-              <div className="route-path">
-                <span className="route-from">Colombo</span>
-                <span className="route-arrow">→</span>
-                <span className="route-to">Negombo</span>
-              </div>
-              <div className="route-stats">145 trips • 23% of total</div>
-            </div>
-          </div>
-        </div>
+
 
         <div className="analytics-card">
           <h3>📊 User Growth</h3>
           <div className="growth-chart">
             <div className="growth-metric">
               <span className="growth-label">New Students</span>
-              <span className="growth-value">+24</span>
-              <span className="growth-change positive">+15%</span>
+              <span className="growth-value">+{newStudents}</span>
             </div>
             <div className="growth-metric">
               <span className="growth-label">New Drivers</span>
-              <span className="growth-value">+3</span>
-              <span className="growth-change positive">+8%</span>
+              <span className="growth-value">+{newDrivers}</span>
             </div>
             <div className="growth-metric">
               <span className="growth-label">Active Users</span>
-              <span className="growth-value">98.5%</span>
-              <span className="growth-change positive">+2.1%</span>
+              <span className="growth-value">{activeUsersPercent}%</span>
             </div>
           </div>
         </div>
       </div>
     </div>
   );
+
+  // Export analytics data as CSV or Excel
+  const exportAnalyticsData = (type: 'csv' | 'excel') => {
+    // Prepare data for export
+    const data = [
+      {
+        'Total Revenue': totalRevenue,
+        'Total Trips': totalTrips,
+        'New Students': newStudents,
+        'New Drivers': newDrivers,
+        'Active Users (%)': activeUsersPercent,
+        'Top Performing Drivers': drivers.slice(0, 5).map((d) => d.name).join(', '),
+      },
+    ];
+
+    if (type === 'csv') {
+      const csvRows = [
+        Object.keys(data[0]).join(','),
+        Object.values(data[0]).join(','),
+      ];
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'analytics.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } else if (type === 'excel') {
+      // Excel export using SheetJS
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Analytics');
+      XLSX.writeFile(workbook, 'analytics.xlsx');
+    }
+  };
 
   return (
     <div className="admin-dashboard">
@@ -688,6 +963,13 @@ const AdminDashboard = () => {
             Students
           </button>
           <button
+            className={`nav-item ${activeSection === 'routes' ? 'active' : ''}`}
+            onClick={() => setActiveSection('routes')}
+          >
+            <span className="nav-icon">🚌</span>
+            Shuttle Routes
+          </button>
+          <button
             className={`nav-item ${activeSection === 'emergencies' ? 'active' : ''}`}
             onClick={() => setActiveSection('emergencies')}
           >
@@ -714,8 +996,12 @@ const AdminDashboard = () => {
             {activeSection === 'analytics' && 'Analytics'}
           </h1>
           <div className="header-actions">
-            <button className="btn-secondary">Export Data</button>
-            <button className="btn-secondary">Settings</button>
+            <button className="btn-secondary" onClick={() => exportAnalyticsData('csv')}>Export CSV</button>
+            <button className="btn-secondary" onClick={() => exportAnalyticsData('excel')}>Export Excel</button>
+            <button className="btn-secondary" style={{background:'#e53935',color:'#fff',border:'none'}} onClick={() => {
+              localStorage.removeItem('adminLoggedIn');
+              window.location.href = '/';
+            }}>Logout</button>
           </div>
         </header>
 
@@ -723,12 +1009,96 @@ const AdminDashboard = () => {
           {activeSection === 'overview' && renderOverview()}
           {activeSection === 'drivers' && renderDrivers()}
           {activeSection === 'students' && renderStudents()}
+          {activeSection === 'routes' && renderRoutes()}
           {activeSection === 'emergencies' && renderEmergencies()}
           {activeSection === 'analytics' && renderAnalytics()}
         </main>
       </div>
 
       <style>{`
+        .top-drivers-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 18px;
+        }
+        .driver-rank-card {
+          flex: 1 1 160px;
+          min-width: 160px;
+          max-width: 220px;
+          background: #f7fafc;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(132,23,186,0.07);
+          padding: 18px 12px 14px 12px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          transition: box-shadow 0.2s;
+        }
+        .driver-rank-card:hover {
+          box-shadow: 0 4px 16px rgba(132,23,186,0.13);
+        }
+        .driver-rank-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+        .driver-avatar-circle {
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #8417BA 60%, #6B1297 100%);
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.3rem;
+          font-weight: 700;
+          box-shadow: 0 1px 4px rgba(132,23,186,0.10);
+        }
+        .driver-rank-number {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #8417BA;
+        }
+        .driver-rank-badge {
+          font-size: 1.3rem;
+          margin-left: 8px;
+        }
+        .driver-rank-info {
+          text-align: center;
+        }
+        .driver-rank-name {
+          font-weight: 600;
+          font-size: 1.05rem;
+          display: block;
+          margin-bottom: 2px;
+        }
+        .driver-rank-trips {
+          font-size: 0.95rem;
+          color: #718096;
+        }
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                }
+                .popup-modal {
+                  background: #fff;
+                  border-radius: 16px;
+                  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+                  padding: 2.5rem 2rem 2rem 2rem;
+                  min-width: 340px;
+                  max-width: 95vw;
+                  max-height: 90vh;
+                  overflow-y: auto;
+                  position: relative;
+                  z-index: 1001;
+                  animation: popup-fadein 0.2s;
+                }
+                @keyframes popup-fadein {
+                  from { opacity: 0; transform: scale(0.97); }
+                  to { opacity: 1; transform: scale(1); }
+                }
         .admin-dashboard {
           display: flex;
           min-height: 100vh;
@@ -746,6 +1116,7 @@ const AdminDashboard = () => {
           left: 0;
           top: 80px;
           box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+          z-index: 1200;
         }
 
         .sidebar-header {
@@ -757,6 +1128,15 @@ const AdminDashboard = () => {
           margin: 0;
           font-size: 1.5rem;
           font-weight: 700;
+        }
+
+        @media (max-width: 600px) {
+          .sidebar-header h1 {
+            margin-top: 18px;
+            margin-bottom: 10px;
+            text-align: center;
+          }
+        }
         }
 
         .sidebar-nav {
@@ -821,6 +1201,26 @@ const AdminDashboard = () => {
         .header-actions {
           display: flex;
           gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+          .header-actions {
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            align-items: stretch;
+          }
+          .search-input {
+            width: 100%;
+            min-width: 0;
+            font-size: 1rem;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 8px rgba(132,23,186,0.06);
+            margin-bottom: 2px;
+          }
+        }
         }
 
         .content-area {
@@ -1033,6 +1433,21 @@ const AdminDashboard = () => {
           justify-content: space-between;
           padding: 8px 0;
           border-bottom: 1px solid #f7fafc;
+        }
+
+        @media (max-width: 600px) {
+          .detail-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            padding: 8px 0;
+          }
+          .detail-row span:first-child {
+            margin-bottom: 2px;
+          }
+          .detail-row span:last-child {
+            margin-left: 0;
+          }
         }
 
         .detail-row span:first-child {
@@ -1378,16 +1793,31 @@ const AdminDashboard = () => {
 
         .growth-chart {
           display: flex;
-          flex-direction: column;
-          gap: 15px;
+          flex-direction: row;
+          gap: 24px;
+          justify-content: space-between;
+          align-items: stretch;
+        }
+        @media (max-width: 700px) {
+          .growth-chart {
+            flex-direction: column;
+            gap: 15px;
+          }
         }
 
         .growth-metric {
+          flex: 1 1 0;
           display: flex;
-          justify-content: space-between;
+          flex-direction: column;
+          justify-content: center;
           align-items: center;
-          padding: 12px 0;
-          border-bottom: 1px solid #f7fafc;
+          background: #f7fafc;
+          border-radius: 10px;
+          margin: 0 2px;
+          padding: 18px 0 14px 0;
+          min-width: 120px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+          border-bottom: none;
         }
 
         .growth-metric:last-child {

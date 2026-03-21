@@ -1,39 +1,154 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 const DriverProfile = () => {
+  const navigate = useNavigate();
   const [editingField, setEditingField] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState('/backgrounds/user.png');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveMessage, setSaveMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const [profileData, setProfileData] = useState({
-    fullName: 'John Smith',
-    username: 'johnsmith',
-    email: 'john.smith@shuttle.com',
-    phone: '+94 77 123 4567',
-    licenseNumber: 'DL123456789',
+    fullName: '',
+    username: '',
+    email: '',
+    phone: '',
+    licenseNumber: '',
     vehicleType: 'Bus',
-    vehicleNumber: 'BUS 101',
-    seats: 45,
-    emergencyContact: 'Jane Smith',
-    emergencyPhone: '+94 77 987 6543'
+    vehicleNumber: '',
+    seats: 0,
+    emergencyContact: '',
+    emergencyPhone: '',
+    pickupLocation: ''
   });
 
   const [profileRef, profileVisible] = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
 
   useEffect(() => {
-    // Load profile data from localStorage if exists
-    const savedProfile = localStorage.getItem('driverProfile');
-    if (savedProfile) {
-      setProfileData(JSON.parse(savedProfile));
-    }
+    // Force visibility after a short delay to ensure component is rendered
+    const timer = setTimeout(() => {
+      if (profileRef.current && !profileVisible) {
+        console.log('Forcing profile visibility');
+        profileRef.current.classList.add('visible');
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [profileVisible]);
 
-    // Load profile image from localStorage if exists
-    const savedImage = localStorage.getItem('driverProfileImage');
-    if (savedImage) {
-      setProfileImage(savedImage);
+  // Auto-dismiss save message after 4 seconds
+  useEffect(() => {
+    if (saveMessage) {
+      const timer = setTimeout(() => setSaveMessage(null), 4000);
+      return () => clearTimeout(timer);
     }
-  }, []);
+  }, [saveMessage]);
+
+  useEffect(() => {
+    const fetchDriverProfile = async () => {
+      const sessionData = localStorage.getItem('driverSession');
+      const isLoggedIn = localStorage.getItem('driverLoggedIn');
+      
+      console.log('DriverProfile: Checking auth...', { sessionData: !!sessionData, isLoggedIn });
+      
+      if (!sessionData && isLoggedIn !== 'true') {
+        console.log('DriverProfile: Not logged in, redirecting to home');
+        navigate('/');
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        // IMMEDIATELY load cached data to show UI instantly (FAST LOAD)
+        const cachedProfile = localStorage.getItem('driverProfileCache');
+        if (cachedProfile) {
+          try {
+            const cached = JSON.parse(cachedProfile);
+            setProfileData(cached.data);
+            if (cached.image) {
+              setProfileImage(cached.image);
+            }
+            setIsLoading(false); // Hide loading indicator immediately with cached data
+          } catch (e) {
+            console.error('Error parsing cache:', e);
+          }
+        }
+
+        const session = JSON.parse(sessionData);
+        const userId = session.user.user_id;
+
+        // Fetch from THREE tables in PARALLEL (while showing cached UI)
+        const [userResult, driverResult, shuttleRouteResult] = await Promise.all([
+          supabase
+            .from('users')
+            .select('*')
+            .eq('user_id', userId)
+            .single(),
+          supabase
+            .from('driver')
+            .select('*')
+            .eq('user_id', userId)
+            .single(),
+          supabase
+            .from('shuttle_route')
+            .select('start_location')
+            .eq('driver_id', userId)
+            .single()
+        ]);
+
+        const { data: userData, error: userError } = userResult;
+        const { data: driverData, error: driverError } = driverResult;
+        const { data: shuttleRouteData, error: shuttleRouteError } = shuttleRouteResult;
+
+        if (userError) throw userError;
+        if (driverError) throw driverError;
+        // Note: shuttleRouteError is OK if there's no route yet
+
+        // Update profile data from all tables
+        const newProfileData = {
+          fullName: userData?.full_name || '',
+          username: userData?.username || '',
+          email: userData?.email || '',
+          phone: userData?.phone_no || '',
+          licenseNumber: driverData?.license_no || '',
+          vehicleType: driverData?.vehicle_type || 'Bus',
+          vehicleNumber: driverData?.vehicle_number || '',
+          seats: driverData?.number_of_seats || 0,
+          pickupLocation: shuttleRouteData?.start_location || ''
+        };
+        
+        setProfileData(newProfileData);
+
+        // Cache the profile data for next load
+        let photoUrl = '';
+        if (driverData?.driver_profile_photo) {
+          setProfileImage(driverData.driver_profile_photo);
+          photoUrl = driverData.driver_profile_photo;
+        }
+        
+        localStorage.setItem('driverProfileCache', JSON.stringify({
+          data: newProfileData,
+          image: photoUrl,
+          timestamp: Date.now()
+        }));
+        
+        console.log('DriverProfile: Data loaded successfully');
+        setIsLoading(false); // Ensure loading is hidden
+      } catch (error: any) {
+        console.error('Error fetching driver profile:', error?.message || error);
+        // Show a user-friendly error and still allow the page to render
+        setIsLoading(false); // Hide loading even on error
+        setSaveMessage({
+          text: 'Unable to load profile data, but you can still edit some fields.',
+          type: 'error'
+        });
+      }
+    };
+
+    fetchDriverProfile();
+  }, [navigate]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,15 +165,110 @@ const DriverProfile = () => {
     fileInputRef.current?.click();
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('driverSession');
+    localStorage.removeItem('driverLoggedIn');
+    localStorage.removeItem('driverProfileImage');
+    localStorage.removeItem('driverProfileCache');
+    navigate('/');
+  };
+
   const handleEditField = (field: string) => {
     setEditingField(field);
   };
 
-  const handleSaveField = (field: string) => {
-    setEditingField(null);
-    // Save profile data and image to localStorage
-    localStorage.setItem('driverProfile', JSON.stringify(profileData));
-    localStorage.setItem('driverProfileImage', profileImage);
+  const handleSaveField = async (field: string) => {
+    try {
+      const sessionData = localStorage.getItem('driverSession');
+      if (!sessionData) {
+        setSaveMessage({
+          text: '⚠ Session expired. Please login again.',
+          type: 'error'
+        });
+        return;
+      }
+
+      const session = JSON.parse(sessionData);
+      const userId = session.user.user_id;
+
+      // Validate that field is not empty
+      const fieldValue = profileData[field as keyof typeof profileData];
+      if (!fieldValue || fieldValue === '') {
+        setSaveMessage({
+          text: '⚠ Please enter a value before saving',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Determine which table to update
+      let updateData: any = {};
+      if (field === 'fullName') {
+        updateData = { full_name: profileData.fullName };
+      } else if (field === 'email') {
+        updateData = { email: profileData.email };
+      } else if (field === 'phone') {
+        updateData = { phone_no: profileData.phone };
+      } else if (field === 'username') {
+        updateData = { username: profileData.username };
+      } else if (field === 'pickupLocation') {
+        updateData = { start_location: profileData.pickupLocation };
+      }
+
+      // Update users table for user-specific fields
+      if (['fullName', 'email', 'phone', 'username'].includes(field)) {
+        const { error } = await supabase
+          .from('users')
+          .update(updateData)
+          .eq('user_id', userId);
+        
+        if (error) {
+          console.error('Users table error:', error);
+          throw new Error(`Failed to update: ${error.message}`);
+        }
+        console.log(`✓ ${field} updated in database`);
+      }
+
+      // Update shuttle_route table for pickup location (start_location)
+      if (field === 'pickupLocation') {
+        const { error } = await supabase
+          .from('shuttle_route')
+          .update(updateData)
+          .eq('driver_id', userId);
+        
+        if (error) {
+          console.error('Shuttle_route table error:', error);
+          throw new Error(`Failed to update: ${error.message}`);
+        }
+        console.log(`✓ ${field} updated in shuttle_route table`);
+      }
+
+      setEditingField(null);
+      
+      // Update cache with new profile data
+      const cachedProfile = localStorage.getItem('driverProfileCache');
+      if (cachedProfile) {
+        try {
+          const cached = JSON.parse(cachedProfile);
+          cached.data = profileData;
+          cached.timestamp = Date.now();
+          localStorage.setItem('driverProfileCache', JSON.stringify(cached));
+        } catch (e) {
+          console.error('Error updating cache:', e);
+        }
+      }
+      setSaveMessage({
+        text: '✓ Changes saved successfully!',
+        type: 'success'
+      });
+    } catch (error: any) {
+      console.error('Error saving field:', error);
+      const errorMsg = error?.message || 'Unknown error occurred';
+      setSaveMessage({
+        text: `✗ ${errorMsg}`,
+        type: 'error'
+      });
+    }
   };
 
   const handleCancelEdit = () => {
@@ -86,13 +296,44 @@ const DriverProfile = () => {
     setProfileImage('');
   };
 
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', paddingTop: '80px' }}>
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="driver-profile-page">
       <div className="dashboard-wrapper">
         {/* Profile Section */}
-        <div ref={profileRef} className={`profile-section fade-up ${profileVisible ? 'visible' : ''}`}>
-          <div className="profile-header">
+        <div ref={profileRef} className={`profile-section fade-up ${(profileVisible || !isLoading) ? 'visible' : ''}`}>
+          <div className="profile-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 className="section-title">Driver Profile</h2>
+            <button 
+              type="button"
+              onClick={handleLogout}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c82333'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc3545'}
+            >
+              <i className="fas fa-sign-out-alt"></i>
+              Logout
+            </button>
           </div>
 
           <div className="profile-content">
@@ -141,10 +382,10 @@ const DriverProfile = () => {
                           onChange={(e) => handleInputChange('fullName', e.target.value)}
                         />
                         <div className="field-actions">
-                          <button className="save-field-btn" onClick={() => handleSaveField('fullName')}>
+                          <button type="button" className="save-field-btn" onClick={() => handleSaveField('fullName')}>
                             <i className="fas fa-check"></i>
                           </button>
-                          <button className="cancel-field-btn" onClick={handleCancelEdit}>
+                          <button type="button" className="cancel-field-btn" onClick={handleCancelEdit}>
                             <i className="fas fa-times"></i>
                           </button>
                         </div>
@@ -152,7 +393,7 @@ const DriverProfile = () => {
                     ) : (
                       <div className="display-field">
                         <span>{profileData.fullName}</span>
-                        <button className="edit-field-btn" onClick={() => handleEditField('fullName')}>
+                        <button type="button" className="edit-field-btn" onClick={() => handleEditField('fullName')}>
                           <i className="fas fa-edit"></i>
                         </button>
                       </div>
@@ -271,6 +512,56 @@ const DriverProfile = () => {
                   </div>
                 </div>
               </div>
+
+              <div className="info-section">
+                <h4>Shuttle Route Location</h4>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Pickup Location / Route Name</label>
+                    {editingField === 'pickupLocation' ? (
+                      <div className="edit-field">
+                        <input
+                          type="text"
+                          value={profileData.pickupLocation}
+                          onChange={(e) => handleInputChange('pickupLocation', e.target.value)}
+                          placeholder="e.g., Rajagiriya, Nugegoda"
+                        />
+                        <div className="field-actions">
+                          <button type="button" className="save-field-btn" onClick={() => handleSaveField('pickupLocation')}>
+                            <i className="fas fa-check"></i>
+                          </button>
+                          <button type="button" className="cancel-field-btn" onClick={handleCancelEdit}>
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="display-field">
+                        <span>{profileData.pickupLocation || 'Not set'}</span>
+                        <button type="button" className="edit-field-btn" onClick={() => handleEditField('pickupLocation')}>
+                          <i className="fas fa-edit"></i>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {saveMessage && (
+                <div style={{
+                  marginTop: '1.5rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  color: saveMessage.type === 'success' ? '#2e7d32' : '#c62828',
+                  backgroundColor: saveMessage.type === 'success' ? '#e8f5e9' : '#ffebee',
+                  border: `1px solid ${saveMessage.type === 'success' ? '#4caf50' : '#f44336'}`,
+                  animation: 'fadeIn 0.3s ease-in'
+                }}>
+                  {saveMessage.text}
+                </div>
+              )}
             </div>
           </div>
         </div>

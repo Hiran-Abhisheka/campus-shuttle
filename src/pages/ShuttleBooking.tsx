@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import PayPalCheckout from '../components/PayPalCheckout';
+import { LOCATIONS } from '../utils/locations';
 import { useLocation, useNavigate } from 'react-router-dom';
 import RouteTrackingModal from '../components/RouteTrackingModal';
+import { supabase } from '../supabaseClient';
 
 interface ShuttleRoute {
   id: number;
@@ -26,21 +29,34 @@ const ShuttleBooking = () => {
   const [passengerPhone, setPassengerPhone] = useState('');
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [bookingData, setBookingData] = useState<any>(null);
+  const [showPayPal, setShowPayPal] = useState(false);
+  const [nearestBusHalt, setNearestBusHalt] = useState('');
 
-  // Generate seat layout (4 rows x 4 seats = 16 seats)
-  const totalSeats = 16;
+  // Use seat count from database (shuttleData.availableSeats)
+  const totalSeats = shuttleData?.availableSeats || 20;
   const seatsPerRow = 4;
 
-  const [bookedSeats] = useState(() => {
-    // Generate consistent booked seats for this shuttle
-    const booked = [];
-    for (let i = 1; i <= totalSeats; i++) {
-      if (Math.random() > 0.7) {
-        booked.push(i);
+  const [bookedSeats, setBookedSeats] = useState<number[]>([]);
+
+  // Fetch real booked seats from Supabase for this shuttle and trip date
+  useEffect(() => {
+    const fetchBookedSeats = async () => {
+      if (!shuttleData) return;
+      // Use today's date for trip_date (or allow user to pick date in future)
+      const tripDate = new Date().toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from('booking_seat')
+        .select('seat_number')
+        .eq('shuttle_route_id', shuttleData.id)
+        .eq('trip_date', tripDate);
+      if (!error && data) {
+        setBookedSeats(data.map((row: any) => Number(row.seat_number)));
+      } else {
+        setBookedSeats([]);
       }
-    }
-    return booked;
-  });
+    };
+    fetchBookedSeats();
+  }, [shuttleData]);
 
   useEffect(() => {
     if (!shuttleData) {
@@ -54,25 +70,30 @@ const ShuttleBooking = () => {
 
   const handleSeatClick = (seatNumber: number) => {
     if (selectedSeats.includes(seatNumber)) {
-      setSelectedSeats(selectedSeats.filter(seat => seat !== seatNumber));
-    } else if (selectedSeats.length >= 4) {
-      alert('Maximum 4 seats can be selected per booking');
+      setSelectedSeats([]);
     } else {
-      setSelectedSeats([...selectedSeats, seatNumber]);
+      setSelectedSeats([seatNumber]);
     }
   };
 
   const handleBooking = () => {
     if (selectedSeats.length === 0) {
-      alert('Please select at least one seat');
+      alert('Please select a seat');
+      return;
+    }
+    if (selectedSeats.length > 1) {
+      alert('You can only book one seat.');
       return;
     }
     if (!passengerName || !passengerEmail || !passengerPhone) {
       alert('Please fill in all passenger details');
       return;
     }
-
-    // Here you would typically send the booking data to a backend
+    if (!nearestBusHalt) {
+      alert('Please select your nearest bus halt');
+      return;
+    }
+    // Prepare booking data, but do not save yet
     const newBookingData = {
       shuttleId: shuttleData.id,
       shuttleData,
@@ -80,18 +101,85 @@ const ShuttleBooking = () => {
       passengerName,
       passengerEmail,
       passengerPhone,
+      nearestBusHalt,
       totalPrice: selectedSeats.length * parseInt(shuttleData.price.replace('LKR ', '')),
       bookingDate: new Date().toISOString()
     };
-
-    // Save to localStorage for demo purposes
-    const existingBookings = JSON.parse(localStorage.getItem('shuttleBookings') || '[]');
-    existingBookings.push(newBookingData);
-    localStorage.setItem('shuttleBookings', JSON.stringify(existingBookings));
-
-    // Set booking data and show tracking modal
     setBookingData(newBookingData);
-    setShowTrackingModal(true);
+    setShowPayPal(true);
+  };
+
+  const handlePayPalSuccess = async (details: any) => {
+    // Save booking after payment
+    if (bookingData) {
+      const {
+        shuttleId,
+        selectedSeats,
+        passengerName,
+        passengerEmail,
+        passengerPhone,
+        nearestBusHalt,
+        totalPrice,
+        bookingDate
+      } = bookingData;
+      try {
+        // Get student_id from userSession in localStorage
+        let studentId = null;
+        const userSession = localStorage.getItem('userSession');
+        if (userSession) {
+          const session = JSON.parse(userSession);
+          studentId = session.user_id || session.userId || session.id;
+        }
+        // Insert booking and get booking_id
+        const { data: bookingRows, error: bookingError } = await supabase.from('booking').insert([
+          {
+            booking_date_time: bookingDate,
+            trip_date: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+            selected_seats: selectedSeats.length,
+            total_amount: totalPrice,
+            booking_status: 'CONFIRMED',
+            passenger_name: passengerName,
+            passenger_email: passengerEmail,
+            passenger_phone_no: passengerPhone,
+            student_id: studentId,
+            shuttle_route_id: shuttleId,
+            pickup_location: nearestBusHalt,
+          }
+        ]).select('booking_id');
+        if (bookingError || !bookingRows || !bookingRows[0]?.booking_id) throw bookingError;
+        const bookingId = bookingRows[0].booking_id;
+        // Insert into booking_seat for each seat
+        const tripDate = new Date().toISOString().slice(0, 10);
+        await Promise.all(selectedSeats.map(seatNumber =>
+          supabase.from('booking_seat').insert([
+            {
+              seat_number: seatNumber,
+              booking_id: bookingId,
+              shuttle_route_id: shuttleId,
+              trip_date: tripDate,
+            }
+          ])
+        ));
+      } catch (error) {
+        // Log error for debugging
+        if (error && typeof error === 'object') {
+          console.error('Booking insert error:', error);
+          if (error.message) {
+            alert('Booking failed: ' + error.message);
+          } else if (error.details) {
+            alert('Booking failed: ' + error.details);
+          } else {
+            alert('Booking failed. Please try again or contact support.');
+          }
+        } else {
+          console.error('Booking insert error:', error);
+          alert('Booking failed. Please try again or contact support.');
+        }
+      }
+      setShowPayPal(false);
+      // Redirect to student dashboard after payment
+      navigate('/student-dashboard');
+    }
   };
 
   const renderSeat = (seatNumber: number) => {
@@ -190,8 +278,8 @@ const ShuttleBooking = () => {
             </div>
 
             <div className="selected-seats-info">
-              <p>Selected Seats: {selectedSeats.length > 0 ? selectedSeats.join(', ') : 'None'}</p>
-              <p>Maximum 4 seats per booking</p>
+              <p>Selected Seat: {selectedSeats.length > 0 ? selectedSeats[0] : 'None'}</p>
+              <p>Only one seat can be booked per student</p>
             </div>
           </div>
 
@@ -229,6 +317,16 @@ const ShuttleBooking = () => {
                   required
                 />
               </div>
+              <div className="form-group">
+                <label>Nearest Bus Halt</label>
+                <input
+                  type="text"
+                  value={nearestBusHalt}
+                  onChange={e => setNearestBusHalt(e.target.value)}
+                  placeholder="Enter your nearest bus halt"
+                  required
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -258,13 +356,26 @@ const ShuttleBooking = () => {
             </div>
           </div>
 
-          <button
-            className="confirm-booking-btn"
-            onClick={handleBooking}
-            disabled={selectedSeats.length === 0}
-          >
-            Confirm Booking
-          </button>
+          {!showPayPal && (
+            <button
+              className="confirm-booking-btn"
+              onClick={handleBooking}
+              disabled={selectedSeats.length === 0}
+            >
+              Confirm Booking
+            </button>
+          )}
+          {showPayPal && bookingData && (
+            <div style={{ marginTop: 20 }}>
+              {/* LKR to USD approx for sandbox */}
+              <PayPalCheckout
+                amount={bookingData.totalPrice / 300}
+                currency="USD"
+                onSuccess={handlePayPalSuccess}
+                onCancel={() => setShowPayPal(false)}
+              />
+            </div>
+          )}
         </div>
       </div>
 

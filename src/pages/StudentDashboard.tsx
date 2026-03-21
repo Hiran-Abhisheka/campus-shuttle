@@ -2,146 +2,200 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
 import RouteMap from '../components/RouteMap';
+import { supabase } from '../supabaseClient';
+
+interface UserSession {
+  userId: number;
+  username: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  role: string;
+  student: {
+    university: string;
+    home_address: string;
+    parent_name: string;
+    parent_phone_no: string;
+    parent_email: string;
+  } | null;
+}
+
+interface ShuttleRoute {
+  id: number;
+  busNumber: string;
+  duration: string;
+  startLocation: string;
+  startTime: string;
+  endLocation: string;
+  endTime: string;
+  stops: number;
+  availableSeats: number;
+  price: string;
+}
+
+interface ShuttleRouteRow {
+  shuttle_route_id: number;
+  bus_number: string;
+  start_location: string;
+  end_location: string;
+  departure_time: string;
+  arrival_time: string;
+  duration_minutes: number;
+  number_of_stops: number;
+  total_seats: number;
+  price_per_seat: number;
+  status: 'Available' | 'NotAvailable';
+}
+
+interface BookedTrip {
+  id: number;
+  busNumber: string;
+  duration: string;
+  startLocation: string;
+  startTime: string;
+  endLocation: string;
+  endTime: string;
+  bookingDate: string;
+  seatNumber: string;
+  status: string;
+  route: [number, number][];
+}
+
+const formatDbTime = (timeValue: string): string => {
+  const [hoursPart = '0', minutesPart = '0'] = timeValue.split(':');
+  const hours24 = Number(hoursPart);
+  const minutes = Number(minutesPart);
+
+  if (Number.isNaN(hours24) || Number.isNaN(minutes)) {
+    return timeValue;
+  }
+
+  const period = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  return `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
 
 const StudentDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showBookedTrips, setShowBookedTrips] = useState(false);
+  const [bookedTrips, setBookedTrips] = useState<BookedTrip[]>([]);
+  const [isBookedTripsLoading, setIsBookedTripsLoading] = useState(false);
+  const [bookedTripsError, setBookedTripsError] = useState('');
   const [showMapModal, setShowMapModal] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState<any>(null);
+  const [selectedRoute, setSelectedRoute] = useState<BookedTrip | null>(null);
+  const [userSession, setUserSession] = useState<UserSession | null>(null);
+  const [shuttleRoutes, setShuttleRoutes] = useState<ShuttleRoute[]>([]);
+  const [isRoutesLoading, setIsRoutesLoading] = useState(false);
+  const [routesError, setRoutesError] = useState('');
   const navigate = useNavigate();
+
+  // Load user session on mount
+  useEffect(() => {
+    const storedSession = localStorage.getItem('userSession');
+    if (storedSession) {
+      setUserSession(JSON.parse(storedSession));
+    } else {
+      // Redirect to home if not logged in
+      navigate('/');
+    }
+  }, [navigate]);
+
+  // Fetch real booked trips for the logged-in student
+  useEffect(() => {
+    const fetchBookedTrips = async () => {
+      if (!userSession?.userId) return;
+      setIsBookedTripsLoading(true);
+      setBookedTripsError('');
+      // Join booking and shuttle_route tables
+      const { data, error } = await supabase
+        .from('booking')
+        .select(`booking_id, trip_date, selected_seats, booking_status, shuttle_route_id, shuttle_route:shuttle_route_id(bus_number, start_location, end_location, departure_time, arrival_time, duration_minutes, number_of_stops, total_seats, price_per_seat)`) 
+        .eq('student_id', userSession.userId)
+        .order('trip_date', { ascending: false });
+      if (error) {
+        setBookedTripsError('Unable to load booked trips.');
+        setBookedTrips([]);
+        setIsBookedTripsLoading(false);
+        return;
+      }
+      if (!data || data.length === 0) {
+        setBookedTrips([]);
+        setIsBookedTripsLoading(false);
+        return;
+      }
+      // Map bookings to BookedTrip[]
+      const mapped = data.map((b: any) => ({
+        id: b.booking_id,
+        busNumber: b.shuttle_route?.bus_number || 'N/A',
+        duration: b.shuttle_route?.duration_minutes ? `${b.shuttle_route.duration_minutes} min` : 'N/A',
+        startLocation: b.shuttle_route?.start_location || 'N/A',
+        startTime: b.shuttle_route?.departure_time ? formatDbTime(b.shuttle_route.departure_time) : 'N/A',
+        endLocation: b.shuttle_route?.end_location || 'N/A',
+        endTime: b.shuttle_route?.arrival_time ? formatDbTime(b.shuttle_route.arrival_time) : 'N/A',
+        bookingDate: b.trip_date || '',
+        seatNumber: b.selected_seats || '',
+        status: b.booking_status || '',
+        route: [], // You can enhance this if you store route coordinates
+      }));
+      setBookedTrips(mapped);
+      setIsBookedTripsLoading(false);
+    };
+    fetchBookedTrips();
+  }, [userSession]);
+
+  useEffect(() => {
+    const fetchShuttleRoutes = async () => {
+      setIsRoutesLoading(true);
+      setRoutesError('');
+
+      const { data, error } = await supabase
+        .from('shuttle_route')
+        .select('shuttle_route_id, bus_number, start_location, end_location, departure_time, arrival_time, duration_minutes, number_of_stops, total_seats, price_per_seat, status');
+
+      console.log('Supabase fetch result - data rows:', data?.length, 'error:', error);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        setRoutesError('Unable to load shuttle routes. Check database connection.');
+        setShuttleRoutes([]);
+        setIsRoutesLoading(false);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('No shuttle routes found in database');
+        setRoutesError('No shuttle routes available yet.');
+        setShuttleRoutes([]);
+        setIsRoutesLoading(false);
+        return;
+      }
+
+      const mappedRoutes = ((data ?? []) as ShuttleRouteRow[]).map((route, index) => ({
+        id: route.shuttle_route_id || index,
+        busNumber: route.bus_number || 'BUS-NEW',
+        duration: route.duration_minutes ? `${route.duration_minutes} min` : 'N/A',
+        startLocation: route.start_location || 'TBD',
+        startTime: route.departure_time ? formatDbTime(route.departure_time) : 'N/A',
+        endLocation: route.end_location || 'TBD',
+        endTime: route.arrival_time ? formatDbTime(route.arrival_time) : 'N/A',
+        stops: route.number_of_stops ?? 0,
+        availableSeats: route.total_seats ?? 0,
+        price: route.price_per_seat ? `LKR ${Number(route.price_per_seat).toFixed(2)}` : 'N/A',
+      }));
+
+      console.log('Mapped routes count:', mappedRoutes.length, 'Routes:', mappedRoutes);
+      setShuttleRoutes(mappedRoutes);
+      setIsRoutesLoading(false);
+    };
+
+    fetchShuttleRoutes();
+  }, []);
 
   const [welcomeRef, welcomeVisible] = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
   const [searchRef, searchVisible] = useScrollAnimation<HTMLDivElement>({ threshold: 0.2, delay: 200 });
   const [statsRef, statsVisible] = useScrollAnimation<HTMLDivElement>({ threshold: 0.2, delay: 400 });
 
-  const shuttleRoutes = [
-    {
-      id: 1,
-      busNumber: 'BUS 101',
-      duration: '45 min',
-      startLocation: 'Main Campus',
-      startTime: '08:00 AM',
-      endLocation: 'City Center',
-      endTime: '08:45 AM',
-      stops: 5,
-      availableSeats: 12,
-      price: 'LKR 50'
-    },
-    {
-      id: 2,
-      busNumber: 'BUS 102',
-      duration: '30 min',
-      startLocation: 'University Gate',
-      startTime: '09:00 AM',
-      endLocation: 'Library',
-      endTime: '09:30 AM',
-      stops: 3,
-      availableSeats: 8,
-      price: 'LKR 30'
-    },
-    {
-      id: 3,
-      busNumber: 'BUS 103',
-      duration: '60 min',
-      startLocation: 'Residence Hall',
-      startTime: '10:00 AM',
-      endLocation: 'Shopping Mall',
-      endTime: '11:00 AM',
-      stops: 7,
-      availableSeats: 15,
-      price: 'LKR 80'
-    },
-    {
-      id: 4,
-      busNumber: 'BUS 104',
-      duration: '40 min',
-      startLocation: 'Sports Complex',
-      startTime: '11:00 AM',
-      endLocation: 'Cafeteria',
-      endTime: '11:40 AM',
-      stops: 4,
-      availableSeats: 10,
-      price: 'LKR 40'
-    },
-    {
-      id: 5,
-      busNumber: 'BUS 105',
-      duration: '50 min',
-      startLocation: 'Lecture Hall',
-      startTime: '12:00 PM',
-      endLocation: 'Student Center',
-      endTime: '12:50 PM',
-      stops: 6,
-      availableSeats: 18,
-      price: 'LKR 60'
-    },
-    {
-      id: 6,
-      busNumber: 'BUS 106',
-      duration: '35 min',
-      startLocation: 'Dormitory',
-      startTime: '01:00 PM',
-      endLocation: 'Gym',
-      endTime: '01:35 PM',
-      stops: 3,
-      availableSeats: 14,
-      price: 'LKR 35'
-    }
-  ];
-
-  const bookedTrips = [
-    {
-      id: 1,
-      busNumber: 'BUS 101',
-      duration: '45 min',
-      startLocation: 'Main Campus',
-      startTime: '08:00 AM',
-      endLocation: 'City Center',
-      endTime: '08:45 AM',
-      bookingDate: '2026-02-16',
-      seatNumber: 'A5',
-      status: 'Confirmed',
-      route: [
-        [6.9271, 79.8612], // Colombo
-        [6.9147, 79.9725], // Rajagiriya
-        [6.9000, 79.9580], // Nugegoda
-        [6.8650, 79.8997], // Moratuwa
-      ]
-    },
-    {
-      id: 2,
-      busNumber: 'BUS 102',
-      duration: '30 min',
-      startLocation: 'University Gate',
-      startTime: '09:00 AM',
-      endLocation: 'Library',
-      endTime: '09:30 AM',
-      bookingDate: '2026-02-16',
-      seatNumber: 'B3',
-      status: 'Confirmed',
-      route: [
-        [6.9147, 79.9725], // Rajagiriya
-        [6.9000, 79.9580], // Nugegoda
-      ]
-    },
-    {
-      id: 3,
-      busNumber: 'BUS 103',
-      duration: '60 min',
-      startLocation: 'Residence Hall',
-      startTime: '10:00 AM',
-      endLocation: 'Shopping Mall',
-      endTime: '11:00 AM',
-      bookingDate: '2026-02-15',
-      seatNumber: 'C7',
-      status: 'Completed',
-      route: [
-        [6.9000, 79.9580], // Nugegoda
-        [6.8650, 79.8997], // Moratuwa
-        [6.9271, 79.8612], // Colombo
-      ]
-    }
-  ];
+  // bookedTrips now comes from Supabase
 
   const handleBookedTripsClick = () => {
     setShowBookedTrips(true);
@@ -151,7 +205,7 @@ const StudentDashboard = () => {
     setShowBookedTrips(false);
   };
 
-  const handleViewRoute = (trip: any) => {
+  const handleViewRoute = (trip: BookedTrip) => {
     setSelectedRoute(trip);
     setShowMapModal(true);
   };
@@ -161,13 +215,20 @@ const StudentDashboard = () => {
     setSelectedRoute(null);
   };
 
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredShuttleRoutes = shuttleRoutes.filter((route) => {
+    if (!normalizedSearch) return true;
+
+    return [route.busNumber, route.startLocation, route.endLocation]
+      .some((field) => field.toLowerCase().includes(normalizedSearch));
+  });
+
   return (
     <div>
       <div className="dashboard-wrapper">
         {/* Welcome Header */}
         <div ref={welcomeRef} className={`dashboard-welcome fade-up ${welcomeVisible ? 'visible' : ''}`}>
-          <h1>Welcome, Student!</h1>
-          <p>Find and book your shuttle rides easily</p>
+          <h1>Welcome, {userSession?.fullName || 'Rider'}!</h1>
         </div>
 
         {/* Search Bar */}
@@ -194,22 +255,14 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">
-              <i className="fas fa-route"></i>
-            </div>
-            <div className="stat-info">
-              <h3>12</h3>
-              <p>Active Routes</p>
-            </div>
-          </div>
+          {/* Removed Active Routes stat card */}
 
           <div className="stat-card" onClick={handleBookedTripsClick} style={{ cursor: 'pointer' }}>
             <div className="stat-icon">
               <i className="fas fa-ticket-alt"></i>
             </div>
             <div className="stat-info">
-              <h3>8</h3>
+              <h3>{isBookedTripsLoading ? '...' : bookedTrips.length}</h3>
               <p>Booked Trips</p>
             </div>
           </div>
@@ -224,7 +277,13 @@ const StudentDashboard = () => {
               </div>
 
               <div className="routes-list">
-                {bookedTrips.map((trip) => (
+                {isBookedTripsLoading ? (
+                  <div className="route-card"><p>Loading booked trips...</p></div>
+                ) : bookedTripsError ? (
+                  <div className="route-card"><p>{bookedTripsError}</p></div>
+                ) : bookedTrips.length === 0 ? (
+                  <div className="route-card"><p>No booked trips found.</p></div>
+                ) : bookedTrips.map((trip) => (
                   <div key={trip.id} className="route-card booked-trip">
                     <div className="route-header">
                       <div className="bus-number">
@@ -287,7 +346,25 @@ const StudentDashboard = () => {
               <h2 className="section-title">Available Shuttle Routes</h2>
 
               <div className="routes-list">
-                {shuttleRoutes.map((route) => (
+                {isRoutesLoading && (
+                  <div className="route-card">
+                    <p>Loading available shuttles...</p>
+                  </div>
+                )}
+
+                {!isRoutesLoading && routesError && (
+                  <div className="route-card">
+                    <p>{routesError}</p>
+                  </div>
+                )}
+
+                {!isRoutesLoading && !routesError && filteredShuttleRoutes.length === 0 && (
+                  <div className="route-card">
+                    <p>No shuttle routes found.</p>
+                  </div>
+                )}
+
+                {!isRoutesLoading && !routesError && filteredShuttleRoutes.map((route) => (
                   <div key={route.id} className="route-card">
                     <div className="route-header">
                       <div className="bus-number">

@@ -1,138 +1,37 @@
--- Campus Shuttle Booking System Database Schema
--- No cancellation functionality included
+CREATE DATABASE "CampusShuttleService";
 
--- Users table (for authentication and role management)
-CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role ENUM('student', 'driver', 'admin') NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+-- Run the rest after connecting to the target database.
+
+CREATE TABLE users ( user_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, full_name VARCHAR(150) NOT NULL, username VARCHAR(50) NOT NULL UNIQUE, password_hash VARCHAR(255) NULL, email VARCHAR(100) NOT NULL UNIQUE, phone_no VARCHAR(15) NOT NULL, role VARCHAR(10) NOT NULL CHECK (role IN ('STUDENT','DRIVER','ADMIN')), status VARCHAR(15) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','INACTIVE')), created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now() );
+
+CREATE TABLE student ( user_id BIGINT PRIMARY KEY, university VARCHAR(100) NOT NULL, home_address VARCHAR(255) NOT NULL, parent_name VARCHAR(100) NOT NULL, parent_phone_no VARCHAR(15) NOT NULL, parent_email VARCHAR(100) NOT NULL, student_profile_photo VARCHAR(255),
+
+CONSTRAINT fk_student_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+
 );
 
--- Students table (extended profile for students)
-CREATE TABLE students (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
-    mobile VARCHAR(20),
-    university VARCHAR(100),
-    home_address TEXT,
-    parent_name VARCHAR(100),
-    parent_email VARCHAR(100),
-    parent_phone VARCHAR(20),
-    total_bookings INT DEFAULT 0,
-    join_date DATE DEFAULT CURRENT_DATE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE(user_id)
+CREATE TABLE driver ( user_id BIGINT PRIMARY KEY, license_no VARCHAR(50) NOT NULL UNIQUE, license_document VARCHAR(255) NOT NULL, vehicle_document VARCHAR(255) NOT NULL, vehicle_type VARCHAR(10) NOT NULL CHECK (vehicle_type IN ('Bus','Minibus')), vehicle_number VARCHAR(30) NOT NULL UNIQUE, number_of_seats INT NOT NULL CHECK (number_of_seats > 0), driver_profile_photo VARCHAR(255),
+
+CONSTRAINT fk_driver_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+
 );
 
--- Drivers table (extended profile for drivers)
-CREATE TABLE drivers (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
-    mobile VARCHAR(20),
-    license_number VARCHAR(50) UNIQUE NOT NULL,
-    vehicle_type VARCHAR(50),
-    vehicle_number VARCHAR(50) UNIQUE NOT NULL,
-    seats INT NOT NULL,
-    total_trips INT DEFAULT 0,
-    rating DECIMAL(3,2) DEFAULT 0.00,
-    status ENUM('active', 'inactive') DEFAULT 'active',
-    join_date DATE DEFAULT CURRENT_DATE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE(user_id)
-);
+CREATE TABLE admin ( user_id BIGINT PRIMARY KEY, CONSTRAINT fk_admin_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE );
 
--- Shuttle routes table
-CREATE TABLE shuttle_routes (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    bus_number VARCHAR(20) UNIQUE NOT NULL,
-    driver_id INT,
-    start_location VARCHAR(100) NOT NULL,
-    end_location VARCHAR(100) NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    duration VARCHAR(20),
-    stops INT DEFAULT 0,
-    total_seats INT NOT NULL,
-    available_seats INT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE SET NULL
-);
+CREATE TABLE shuttle_route ( shuttle_route_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, bus_number VARCHAR(20) NOT NULL UNIQUE, start_location VARCHAR(100) NOT NULL, end_location VARCHAR(100) NOT NULL, departure_time TIME NOT NULL, arrival_time TIME NOT NULL, duration_minutes INT NOT NULL CHECK (duration_minutes > 0), number_of_stops INT NOT NULL CHECK (number_of_stops >= 0), total_seats INT NOT NULL CHECK (total_seats > 0), price_per_seat NUMERIC(10,2) NOT NULL CHECK (price_per_seat >= 0), status VARCHAR(15) NOT NULL DEFAULT 'Available' CHECK (status IN ('Available','NotAvailable')), driver_id BIGINT NOT NULL, CONSTRAINT fk_route_driver FOREIGN KEY (driver_id) REFERENCES driver(user_id) ON DELETE RESTRICT );
 
--- Bookings table (no cancellation fields)
-CREATE TABLE bookings (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    student_id INT NOT NULL,
-    shuttle_route_id INT NOT NULL,
-    selected_seats JSON NOT NULL, -- Array of seat numbers
-    passenger_name VARCHAR(100) NOT NULL,
-    passenger_email VARCHAR(100) NOT NULL,
-    passenger_phone VARCHAR(20) NOT NULL,
-    total_price DECIMAL(10,2) NOT NULL,
-    booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('confirmed', 'completed') DEFAULT 'confirmed',
-    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-    FOREIGN KEY (shuttle_route_id) REFERENCES shuttle_routes(id) ON DELETE CASCADE
-);
+CREATE TABLE booking ( booking_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, booking_date_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), trip_date DATE NOT NULL, selected_seats INT NOT NULL CHECK (selected_seats > 0 AND selected_seats <= 2), total_amount NUMERIC(10,2) NOT NULL CHECK (total_amount >= 0), booking_status VARCHAR(15) NOT NULL DEFAULT 'CONFIRMED' CHECK (booking_status IN ('CONFIRMED','CANCELLED')), passenger_name VARCHAR(150) NOT NULL, passenger_email VARCHAR(100) NOT NULL, passenger_phone_no VARCHAR(15) NOT NULL, student_id BIGINT NOT NULL, shuttle_route_id BIGINT NOT NULL, CONSTRAINT fk_booking_student FOREIGN KEY (student_id) REFERENCES student(user_id) ON DELETE RESTRICT, CONSTRAINT fk_booking_route FOREIGN KEY (shuttle_route_id) REFERENCES shuttle_route(shuttle_route_id) ON DELETE RESTRICT );
 
--- Payments table (for tracking payments)
-CREATE TABLE payments (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    booking_id INT NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    payment_method ENUM('card', 'cash', 'online') DEFAULT 'online',
-    payment_status ENUM('pending', 'completed', 'failed') DEFAULT 'completed',
-    transaction_id VARCHAR(100),
-    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
-);
+CREATE TABLE booking_seat ( booking_seat_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, seat_number INT NOT NULL CHECK (seat_number > 0), booking_id BIGINT NOT NULL, shuttle_route_id BIGINT NOT NULL, trip_date DATE NOT NULL, CONSTRAINT fk_bookingseat_booking FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE CASCADE, CONSTRAINT fk_bookingseat_route FOREIGN KEY (shuttle_route_id) REFERENCES shuttle_route(shuttle_route_id) ON DELETE CASCADE, CONSTRAINT uq_seatbooking UNIQUE (shuttle_route_id, trip_date, seat_number) );
 
--- Emergency reports table
-CREATE TABLE emergency_reports (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    driver_id INT NOT NULL,
-    shuttle_route_id INT,
-    emergency_type VARCHAR(100) NOT NULL,
-    location VARCHAR(255),
-    description TEXT,
-    status ENUM('pending', 'in_progress', 'resolved') DEFAULT 'pending',
-    reported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    resolved_at TIMESTAMP NULL,
-    FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
-    FOREIGN KEY (shuttle_route_id) REFERENCES shuttle_routes(id) ON DELETE SET NULL
-);
+CREATE TABLE payment ( payment_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, payment_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), amount NUMERIC(10,2) NOT NULL CHECK (amount >= 0), payment_method VARCHAR(20) NOT NULL DEFAULT 'ONLINE', payment_status VARCHAR(10) NOT NULL DEFAULT 'PAID' CHECK (payment_status IN ('PAID','FAILED')), booking_id BIGINT NOT NULL UNIQUE, CONSTRAINT fk_payment_booking FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE CASCADE );
 
--- Route tracking table (for real-time tracking)
-CREATE TABLE route_tracking (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    booking_id INT NOT NULL,
-    current_stop INT DEFAULT 1,
-    eta VARCHAR(20),
-    status ENUM('preparing', 'in_transit', 'approaching', 'arrived') DEFAULT 'preparing',
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
-);
+CREATE TABLE emergency_report ( emergency_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, emergency_type VARCHAR(30) NOT NULL CHECK (emergency_type IN ('TIRE_PUNCH','ENGINE_ISSUE','MEDICAL_EMERGENCY','ACCIDENT','OTHER')), location_name VARCHAR(100) NOT NULL, description VARCHAR(255), reported_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), status VARCHAR(15) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','IN_PROGRESS','RESOLVED')), resolved_time TIMESTAMP WITH TIME ZONE, driver_id BIGINT NOT NULL, shuttle_route_id BIGINT NOT NULL, resolved_by_admin_id BIGINT, CONSTRAINT fk_emergency_driver FOREIGN KEY (driver_id) REFERENCES driver(user_id) ON DELETE SET NULL, CONSTRAINT fk_emergency_route FOREIGN KEY (shuttle_route_id) REFERENCES shuttle_route(shuttle_route_id) ON DELETE SET NULL, CONSTRAINT fk_emergency_admin FOREIGN KEY (resolved_by_admin_id) REFERENCES admin(user_id) ON DELETE SET NULL );
 
--- Indexes for better performance
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_role ON users(role);
-CREATE INDEX idx_bookings_student ON bookings(student_id);
-CREATE INDEX idx_bookings_route ON bookings(shuttle_route_id);
-CREATE INDEX idx_bookings_date ON bookings(booking_date);
-CREATE INDEX idx_shuttle_routes_active ON shuttle_routes(is_active);
-CREATE INDEX idx_emergency_reports_status ON emergency_reports(status);
+CREATE TABLE live_tracking ( tracking_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, latitude NUMERIC(10,7) NOT NULL CHECK (latitude BETWEEN -90 AND 90), longitude NUMERIC(10,7) NOT NULL CHECK (longitude BETWEEN -180 AND 180), speed NUMERIC(5,2) CHECK (speed >= 0), tracking_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), trip_date DATE NOT NULL, shuttle_route_id BIGINT NOT NULL, driver_id BIGINT NOT NULL, CONSTRAINT fk_tracking_route FOREIGN KEY (shuttle_route_id) REFERENCES shuttle_route(shuttle_route_id) ON DELETE CASCADE, CONSTRAINT fk_tracking_driver FOREIGN KEY (driver_id) REFERENCES driver(user_id) ON DELETE CASCADE );
 
--- Sample data insertion (optional)
--- INSERT INTO users (username, email, password_hash, role) VALUES
--- ('admin', 'admin@campus.edu', '$2b$10$hashedpassword', 'admin'),
--- ('student1', 'student1@campus.edu', '$2b$10$hashedpassword', 'student'),
--- ('driver1', 'driver1@campus.edu', '$2b$10$hashedpassword', 'driver');</content>
-<parameter name="filePath">d:\Shuttle\campus-shuttle\database_schema.sql
+CREATE TABLE notification ( notification_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, message VARCHAR(255) NOT NULL, receiver_type VARCHAR(10) NOT NULL CHECK (receiver_type IN ('STUDENT','PARENT')), receiver_phone VARCHAR(15) NOT NULL, sent_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), status VARCHAR(15) NOT NULL DEFAULT 'SENT' CHECK (status IN ('SENT','FAILED','PENDING')), booking_id BIGINT, student_id BIGINT NOT NULL, CONSTRAINT fk_notification_booking FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE SET NULL, CONSTRAINT fk_notification_student FOREIGN KEY (student_id) REFERENCES student(user_id) ON DELETE CASCADE );
+
+COMMIT;
+
+ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE;

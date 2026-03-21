@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+
+import { useNavigate } from 'react-router-dom';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
+import { supabase } from '../supabaseClient';
 
 const StudentProfile = () => {
+  const navigate = useNavigate();
   const [editingField, setEditingField] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState('/backgrounds/user.png');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,10 +25,25 @@ const StudentProfile = () => {
   const [profileRef, profileVisible] = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
 
   useEffect(() => {
-    // Load profile data from localStorage if exists
-    const savedProfile = localStorage.getItem('studentProfile');
-    if (savedProfile) {
-      setProfileData(JSON.parse(savedProfile));
+    // Load user session data
+    const userSession = localStorage.getItem('userSession');
+    if (userSession) {
+      const session = JSON.parse(userSession);
+      setProfileData(prev => ({
+        ...prev,
+        fullName: session.fullName || prev.fullName,
+        username: session.username || prev.username,
+        email: session.email || prev.email,
+        mobile: session.phone || prev.mobile,
+        university: session.student?.university || prev.university,
+        homeAddress: session.student?.home_address || prev.homeAddress,
+        parentName: session.student?.parent_name || prev.parentName,
+        parentPhone: session.student?.parent_phone_no || prev.parentPhone,
+        parentEmail: session.student?.parent_email || prev.parentEmail
+      }));
+    } else {
+      // Redirect to home if not logged in
+      navigate('/');
     }
 
     // Load profile image from localStorage if exists
@@ -32,7 +51,15 @@ const StudentProfile = () => {
     if (savedImage) {
       setProfileImage(savedImage);
     }
-  }, []);
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('userSession');
+    localStorage.removeItem('studentLoggedIn');
+    localStorage.removeItem('studentProfile');
+    localStorage.removeItem('studentProfileImage');
+    navigate('/');
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,11 +80,47 @@ const StudentProfile = () => {
     setEditingField(field);
   };
 
-  const handleSaveField = (field: string) => {
+  const handleSaveField = async (field: string) => {
     setEditingField(null);
     // Save profile data and image to localStorage
     localStorage.setItem('studentProfile', JSON.stringify(profileData));
     localStorage.setItem('studentProfileImage', profileImage);
+
+    // Save to Supabase database
+    try {
+      const userSession = localStorage.getItem('userSession');
+      if (!userSession) return;
+      const session = JSON.parse(userSession);
+      const userId = session.user_id || session.userId || session.id;
+      if (!userId) return;
+
+      // Update users table
+      await supabase
+        .from('users')
+        .update({
+          full_name: profileData.fullName,
+          username: profileData.username,
+          email: profileData.email,
+          phone_no: profileData.mobile
+        })
+        .eq('user_id', userId);
+
+      // Update student table
+      await supabase
+        .from('student')
+        .update({
+          university: profileData.university,
+          home_address: profileData.homeAddress,
+          parent_name: profileData.parentName,
+          parent_phone_no: profileData.parentPhone,
+          parent_email: profileData.parentEmail,
+          student_profile_photo: profileImage
+        })
+        .eq('user_id', userId);
+    } catch (error) {
+      // Optionally handle error (e.g., show notification)
+      console.error('Failed to update profile in database:', error);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -123,6 +186,29 @@ const StudentProfile = () => {
                 />
               </div>
               <h3 className="student-name">{profileData.fullName}</h3>
+              <button 
+                className="logout-btn" 
+                onClick={handleLogout}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem 1.5rem',
+                  background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 15px rgba(220, 53, 69, 0.3)'
+                }}
+              >
+                <i className="fas fa-sign-out-alt"></i>
+                Logout
+              </button>
             </div>
 
             <div className="profile-details">

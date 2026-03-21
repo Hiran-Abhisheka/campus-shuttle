@@ -1,3 +1,4 @@
+import ConfirmEmail from './pages/ConfirmEmail';
 import React from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
@@ -72,6 +73,12 @@ export default function App() {
             <Contact />
           </Layout>
         } />
+        <Route path="/about" element={
+          <Layout>
+            <AboutUs />
+          </Layout>
+        } />
+        <Route path="/confirm-email" element={<ConfirmEmail />} />
       </Routes>
     </>
   )

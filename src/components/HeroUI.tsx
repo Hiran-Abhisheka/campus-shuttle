@@ -44,10 +44,7 @@ export default function HeroUI() {
           ref={statsRef} 
           className={`stats fade-left ${statsVisible ? 'visible' : ''}`}
         >
-          <div className="stat">
-            <div className="num">12</div>
-            <div className="label">Active Routes</div>
-          </div>
+          {/* Removed Active Routes stat button */}
           <div className="stat">
             <div className="num">230</div>
             <div className="label">Passengers Today</div>
