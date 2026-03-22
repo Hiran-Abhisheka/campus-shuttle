@@ -1,30 +1,143 @@
 # Campus Shuttle — Frontend (UI)
 
-This repository contains a simple React + TypeScript frontend scaffold for the Campus Shuttle project. It implements a basic layout, routing and two starter pages (Home and Login). The app uses mock data and placeholders for integration points (Google Maps, Firebase) which will be wired later.
+A modern React + TypeScript web app for campus shuttle management, featuring admin, driver, and student dashboards, real-time route tracking, Google Maps integration, and Firebase hosting.
 
-Getting started
+---
 
-1. Install dependencies:
+## 🚀 Features
 
-```sh
-npm install
+- **Admin Dashboard**: Manage drivers, students, shuttle routes, emergencies, analytics, and pricing.
+- **Driver Dashboard**: View assigned routes, mark attendance, and use Google Maps for route management.
+- **Student Dashboard**: Book seats, view shuttle schedules, and track shuttles live.
+- **Emergency Reporting**: Real-time emergency report management and resolution.
+- **Google Maps Integration**: Interactive location pickers, route info, and distance/ETA calculation.
+- **Supabase Backend**: For authentication and data storage.
+- **Firebase Hosting**: Fast, secure deployment.
+- **Export/Import**: Download analytics as CSV/Excel.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React, TypeScript, Vite
+- **Styling**: CSS, FontAwesome
+- **APIs**: Google Maps (Directions, Distance Matrix, Geocoding, Places)
+- **Backend**: Supabase (Postgres, Auth)
+- **Hosting**: Firebase Hosting
+
+---
+
+## 📦 Project Structure
+
+```
+campus-shuttle/
+├── public/
+├── src/
+│   ├── components/         # Reusable UI components
+│   ├── hooks/              # Custom React hooks
+│   ├── pages/              # Main app pages (AdminDashboard, DriverDashboard, etc.)
+│   ├── styles/             # CSS files
+│   ├── utils/              # Utility functions (Google Maps, etc.)
+│   └── firebase.ts         # Firebase config
+├── database_schema.sql     # Postgres schema
+├── GOOGLE_MAPS_INTEGRATION.md
+├── GOOGLE_MAPS_SETUP_COMPLETE.md
+├── firebase.json           # Firebase Hosting config
+├── package.json            # NPM scripts & dependencies
+└── README.md
 ```
 
-2. Run the dev server:
+---
 
-```sh
-npm run dev
-```
+## ⚡ Getting Started
 
-Assumptions made
+1. **Install dependencies:**
+   ```sh
+   npm install
+   ```
+2. **Set up environment variables:**
+   - Create a `.env` file in the root:
+     ```
+     VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+     ```
+3. **Run the dev server:**
+   ```sh
+   npm run dev
+   ```
+4. **Build for production:**
+   ```sh
+   npm run build
+   ```
+5. **Preview production build:**
+   ```sh
+   npm run preview
+   ```
 
-- Frontend-only for now (no backend wiring).  
-- Using Vite + React + TypeScript and plain CSS (keeps setup minimal).  
+---
 
-Next steps I can take for you
+## 🌐 Deployment
 
-- Integrate Google Maps in the Home page.  
-- Add authentication UI flow and connect to Firebase.  
-- Add tests (React Testing Library).  
-- Add Tailwind or Material UI if you prefer a different styling approach.
-# campus-shuttle-
+### Deploy to Firebase Hosting
+
+1. **Build the app:**
+   ```sh
+   npm run build
+   ```
+2. **Deploy:**
+   ```sh
+   firebase deploy --only hosting
+   ```
+3. **Live URL:**
+   [https://campus-shutle.web.app](https://campus-shutle.web.app)
+
+---
+
+## 🗺️ Google Maps Integration
+
+- Uses Directions, Distance Matrix, Geocoding, and Places APIs.
+- See `GOOGLE_MAPS_INTEGRATION.md` and `GOOGLE_MAPS_SETUP_COMPLETE.md` for setup and usage details.
+- Main location picker: `src/components/GoogleMapsLocationPicker.tsx`
+- Route info: `src/components/RouteInfo.tsx`
+
+---
+
+## 🔥 Firebase Hosting
+
+- Configured via `firebase.json`.
+- Public files served from `dist/` after build.
+- All routes rewritten to `index.html` for SPA support.
+
+---
+
+## 📊 Analytics & Export
+
+- Admins can export analytics as CSV or Excel.
+- Uses `xlsx` for Excel export.
+
+---
+
+## 📚 Useful Scripts
+
+- `npm run dev` — Start dev server
+- `npm run build` — Build for production
+- `npm run preview` — Preview production build
+
+---
+
+## 📝 Notes
+
+- Make sure your Google Maps API key is enabled for all required APIs.
+- Supabase and Firebase credentials should be kept secure.
+- For more details, see the markdown docs in this repo.
+
+---
+
+## 👀 Live Demo
+
+[https://campus-shutle.web.app](https://campus-shutle.web.app)
+
+---
+
+## 📄 License
+
+MIT
