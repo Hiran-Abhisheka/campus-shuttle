@@ -119,7 +119,7 @@ const Navbar = () => {
 
       <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
         <div className="navbar-container">
-          <div className="nav-logo" style={{ cursor: 'default', pointerEvents: 'none', userSelect: 'none' }}>
+          <div className="nav-logo" style={{ cursor: 'default' }}>
             <i className="fas fa-bus"></i>
             <span>Campus Shuttle</span>
           </div>

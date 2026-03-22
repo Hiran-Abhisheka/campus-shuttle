@@ -59,6 +59,7 @@ interface BookedTrip {
   seatNumber: string;
   status: string;
   route: [number, number][];
+  liveLocation?: string;
 }
 
 const formatDbTime = (timeValue: string): string => {
@@ -106,10 +107,10 @@ const StudentDashboard = () => {
       if (!userSession?.userId) return;
       setIsBookedTripsLoading(true);
       setBookedTripsError('');
-      // Join booking and shuttle_route tables
+      // Join booking and shuttle_route tables, include live_location
       const { data, error } = await supabase
         .from('booking')
-        .select(`booking_id, trip_date, selected_seats, booking_status, shuttle_route_id, shuttle_route:shuttle_route_id(bus_number, start_location, end_location, departure_time, arrival_time, duration_minutes, number_of_stops, total_seats, price_per_seat)`) 
+        .select(`booking_id, trip_date, selected_seats, booking_status, shuttle_route_id, shuttle_route:shuttle_route_id(bus_number, start_location, end_location, departure_time, arrival_time, duration_minutes, number_of_stops, total_seats, price_per_seat, live_location)`) 
         .eq('student_id', userSession.userId)
         .order('trip_date', { ascending: false });
       if (error) {
@@ -136,6 +137,7 @@ const StudentDashboard = () => {
         seatNumber: b.selected_seats || '',
         status: b.booking_status || '',
         route: [], // You can enhance this if you store route coordinates
+        liveLocation: b.shuttle_route?.live_location || '',
       }));
       setBookedTrips(mapped);
       setIsBookedTripsLoading(false);
@@ -206,8 +208,12 @@ const StudentDashboard = () => {
   };
 
   const handleViewRoute = (trip: BookedTrip) => {
-    setSelectedRoute(trip);
-    setShowMapModal(true);
+    if (trip.liveLocation && trip.liveLocation.startsWith('http')) {
+      window.open(trip.liveLocation, '_blank');
+    } else {
+      setSelectedRoute(trip);
+      setShowMapModal(true);
+    }
   };
 
   const closeMapModal = () => {

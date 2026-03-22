@@ -17,6 +17,7 @@ interface Seat {
   id: number;
   occupied: boolean;
   passengerName?: string;
+  parentName?: string;
   parentPhone?: string;
   studentId?: string;
   pickupLocation?: string;
@@ -44,6 +45,9 @@ interface DriverSession {
 }
 
 const DriverDashboard = () => {
+  // Google Map link state
+  const [googleMapLink, setGoogleMapLink] = useState('');
+  const [linkTouched, setLinkTouched] = useState(false);
     // Fix: Add missing state for today's bookings
     const [todaysBookings, setTodaysBookings] = useState<{ student_name: string; pickup_location: string }[]>([]);
   const navigate = useNavigate();
@@ -277,21 +281,53 @@ const DriverDashboard = () => {
     }
   }, [error]);
 
-  const handleToggleTracking = () => {
+  const handleToggleTracking = async () => {
+    setLinkTouched(true);
+    const sessionData = localStorage.getItem('driverSession');
+    if (!sessionData) {
+      setTrackingMessage('⚠️ Session expired. Please login again.');
+      return;
+    }
+    const session = JSON.parse(sessionData);
+    // Get the latest route for this driver
+    const { data: routeData, error: routeError } = await supabase
+      .from('shuttle_route')
+      .select('shuttle_route_id')
+      .eq('driver_id', session.user.user_id)
+      .order('shuttle_route_id', { ascending: false })
+      .limit(1)
+      .single();
+    if (routeError || !routeData) {
+      setTrackingMessage('⚠️ Could not find your current route.');
+      return;
+    }
+    const routeId = routeData.shuttle_route_id;
     if (!isTracking) {
+      if (!googleMapLink.trim()) {
+        setTrackingMessage('⚠️ Please enter the Google Map live location link before starting the trip.');
+        return;
+      }
+      // Save the link to live_location
+      const { error: updateError } = await supabase
+        .from('shuttle_route')
+        .update({ live_location: googleMapLink.trim() })
+        .eq('shuttle_route_id', routeId);
+      if (updateError) {
+        setTrackingMessage('⚠️ Failed to save live location link.');
+        return;
+      }
       setTrackingMessage('📍 Starting trip...');
       startTracking();
-      
-      // Open Google Maps directions in new tab after a short delay to let location capture start
-      setTimeout(() => {
-        if (location) {
-          const origin = `${location.lat},${location.lng}`;
-          const destination = `${NSBM_GREEN_UNIVERSITY.lat},${NSBM_GREEN_UNIVERSITY.lng}`;
-          const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving&dir_action=navigate`;
-          window.open(directionsUrl, '_blank');
-        }
-      }, 500);
     } else {
+      // Clear the live_location link
+      const { error: clearError } = await supabase
+        .from('shuttle_route')
+        .update({ live_location: null })
+        .eq('shuttle_route_id', routeId);
+      if (clearError) {
+        setTrackingMessage('⚠️ Failed to clear live location link.');
+        return;
+      }
       stopTracking();
       setTrackingMessage('');
     }
@@ -331,22 +367,45 @@ const DriverDashboard = () => {
         durationMinutes = arrTotalMin >= depTotalMin ? arrTotalMin - depTotalMin : 1440 - depTotalMin + arrTotalMin;
       }
 
-      // Save to shuttle_route table
-      const { error: routeError } = await supabase
+
+      // Check if route exists for this bus number
+      const { data: existingRoute, error: checkError } = await supabase
         .from('shuttle_route')
-        .insert({
-          bus_number: busNumber,
-          start_location: routeForm.startLocation || 'Starting Point',
-          end_location: routeForm.endLocation || 'Destination',
-          departure_time: routeForm.departureTime || '00:00',
-          arrival_time: routeForm.arrivalTime || '00:00',
-          duration_minutes: durationMinutes || 60,
-          number_of_stops: 1,
-          total_seats: totalSeats || 50,
-          price_per_seat: 0,
-          status: isTracking ? 'Available' : 'Available',
-          driver_id: userId
-        });
+        .select('shuttle_route_id')
+        .eq('bus_number', busNumber)
+        .single();
+
+      let routeError = null;
+      if (existingRoute) {
+        // Update only the times and related fields
+        const { error } = await supabase
+          .from('shuttle_route')
+          .update({
+            departure_time: routeForm.departureTime || '00:00',
+            arrival_time: routeForm.arrivalTime || '00:00',
+            duration_minutes: durationMinutes || 60
+          })
+          .eq('bus_number', busNumber);
+        routeError = error;
+      } else {
+        // Insert new route
+        const { error } = await supabase
+          .from('shuttle_route')
+          .insert({
+            bus_number: busNumber,
+            start_location: routeForm.startLocation || 'Starting Point',
+            end_location: routeForm.endLocation || 'Destination',
+            departure_time: routeForm.departureTime || '00:00',
+            arrival_time: routeForm.arrivalTime || '00:00',
+            duration_minutes: durationMinutes || 60,
+            number_of_stops: 1,
+            total_seats: totalSeats || 50,
+            price_per_seat: 0,
+            status: isTracking ? 'Available' : 'Available',
+            driver_id: userId
+          });
+        routeError = error;
+      }
 
       if (routeError) {
         console.error('shuttle_route table error:', routeError);
@@ -449,8 +508,8 @@ const DriverDashboard = () => {
         ...seat,
         passengerName: studentName,
         pickupLocation,
-        parentName,
-        parentPhone,
+        parentName: parentName,
+        parentPhone: parentPhone,
       });
       setShowSeatModal(true);
     } catch (err) {
@@ -472,6 +531,7 @@ const DriverDashboard = () => {
     setSelectedEmergencyReason(reason);
   };
 
+  const [sosSuccess, setSosSuccess] = useState(false);
   const handleReportEmergency = async () => {
     try {
       const sessionData = localStorage.getItem('driverSession');
@@ -500,7 +560,7 @@ const DriverDashboard = () => {
         accident: 'ACCIDENT',
         other: 'OTHER',
       };
-      const emergencyType = emergencyTypeMap[selectedEmergencyReason] || 'OTHER';
+      const emergencyType = emergencyTypeMap[selectedEmergencyReason as keyof typeof emergencyTypeMap] || 'OTHER';
       const locationName = startLocation || 'Unknown Location';
       const { error: insertError } = await supabase
         .from('emergency_report')
@@ -514,7 +574,8 @@ const DriverDashboard = () => {
       if (insertError) {
         alert('Failed to report emergency: ' + insertError.message);
       } else {
-        alert('Emergency reported successfully!');
+        setSosSuccess(true);
+        setTimeout(() => setSosSuccess(false), 2500);
       }
     } catch (err) {
       alert('An error occurred while reporting the emergency.');
@@ -549,7 +610,7 @@ const DriverDashboard = () => {
 
   return (
     <>
-      <div className="driver-dashboard">
+      <div className="driver-dashboard" style={{ background: '#f5f3ff', minHeight: '100vh', padding: 0, marginTop: '6rem' }}>
       {isLoading ? (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
           <p>Loading...</p>
@@ -559,10 +620,13 @@ const DriverDashboard = () => {
       {/* Header */}
       <div className="dashboard-header">
         <div className="header-content">
-          <h1>🚐 Driver Dashboard</h1>
+          <h1>Driver Dashboard</h1>
           <div className="bus-info">
             <h2>Welcome, {driverSession?.user?.full_name}</h2>
-            <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>{driverSession?.driver?.vehicle_number || busRoute.busNumber}</p>
+            <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>
+              <i className='fas fa-bus' style={{ color: '#8417BA', marginRight: 6 }}></i>
+              {driverSession?.driver?.vehicle_number || busRoute.busNumber}
+            </p>
           </div>
         </div>
         <div className="header-actions">
@@ -570,14 +634,15 @@ const DriverDashboard = () => {
             className={`bus-status-btn ${busAvailable ? 'available' : 'unavailable'}`}
             onClick={toggleBusStatus}
           >
-            {busAvailable ? '🟢 Available' : '🔴 Not Available'}
+            <i className='fas fa-circle' style={{ color: busAvailable ? '#4CAF50' : '#f44336', marginRight: 6 }}></i>
+            {busAvailable ? 'Available' : 'Not Available'}
           </button>
           <div className="sos-container">
             <button
-              className="sos-btn"
+              className='sos-btn'
               onClick={handleSOSClick}
             >
-              🚨 SOS
+              <i className='fas fa-exclamation-triangle' style={{ marginRight: 6 }}></i>SOS
             </button>
             {showSOSDropdown && (
               <div className="sos-dropdown">
@@ -625,8 +690,13 @@ const DriverDashboard = () => {
               </div>
             )}
           </div>
+          {sosSuccess && (
+            <div style={{ color: '#4CAF50', fontWeight: 600, margin: '0.5rem 0 0.5rem 0', fontSize: '1.1rem', textAlign: 'center' }}>
+              Emergency successfully reported!
+            </div>
+          )}
           <div className="status-badge">
-            <span className="live-indicator">🔴</span>
+            <span className='live-indicator' style={{ color: '#f44336', marginRight: 6 }}><i className='fas fa-circle'></i></span>
             LIVE TRACKING
           </div>
         </div>
@@ -636,7 +706,10 @@ const DriverDashboard = () => {
       <div className="dashboard-content">
         {/* New Section: Today's Bookings */}
         <div className="todays-bookings-section" style={{ marginBottom: '2rem', background: '#f9f9f9', borderRadius: '8px', padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          <h2 style={{ marginBottom: '1rem', color: '#1976D2' }}>📝 Today's Bookings</h2>
+          <h2 style={{ marginBottom: '1rem', color: '#8417BA', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <i className='fas fa-calendar-check' style={{ color: '#8417BA' }}></i>
+            Today's Bookings
+          </h2>
           {todaysBookings.length === 0 ? (
             <p style={{ color: '#888', fontStyle: 'italic' }}>No bookings for today.</p>
           ) : (
@@ -659,11 +732,11 @@ const DriverDashboard = () => {
           )}
         </div>
         {/* Left Panel - Route Management, Bus Status & Seats */}
-        <div className="left-panel">
+        <div className="left-panel" style={{ background: '#fff', borderRadius: '18px', boxShadow: '0 4px 24px 0 rgba(132,23,186,0.08)', padding: '2rem 1.5rem', margin: '0 1.5rem 2rem 0', border: '1px solid #ede7f6' }}>
           {/* Route Form Card */}
           <div className="route-form-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0 }}>🛣️ Route Management</h3>
+              <h3 style={{ margin: 0 }}><i className='fas fa-route' style={{ color: '#8417BA', marginRight: 8 }}></i>Route Management</h3>
               <button
                 type="button"
                 className={`location-tracking-btn ${isTracking ? 'active' : ''}`}
@@ -682,7 +755,7 @@ const DriverDashboard = () => {
                   boxShadow: isTracking ? '0 2px 8px rgba(76, 175, 80, 0.3)' : 'none'
                 }}
               >
-                {isTracking ? '🟢 Tracking ON' : '⚪ Turn On Location'}
+                {isTracking ? <><i className='fas fa-location-arrow' style={{ color: '#4CAF50', marginRight: 6 }}></i>Tracking ON</> : <><i className='fas fa-location-arrow' style={{ color: '#888', marginRight: 6 }}></i>Turn On Location</>}
               </button>
             </div>
 
@@ -712,7 +785,7 @@ const DriverDashboard = () => {
             {/* Trip Control Buttons */}
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '0.5rem' }}>🕐 Departure Time</label>
+                <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '0.5rem' }}><i className='fas fa-clock' style={{ color: '#8417BA', marginRight: 4 }}></i>Departure Time</label>
                 <input
                   type="time"
                   value={routeForm.departureTime}
@@ -728,7 +801,7 @@ const DriverDashboard = () => {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '0.5rem' }}>🕑 Arrival Time</label>
+                <label style={{ fontSize: '0.9rem', color: '#666', display: 'block', marginBottom: '0.5rem' }}><i className='fas fa-clock' style={{ color: '#8417BA', marginRight: 4 }}></i>Arrival Time</label>
                 <input
                   type="time"
                   value={routeForm.arrivalTime}
@@ -765,7 +838,7 @@ const DriverDashboard = () => {
               onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1976D2'}
               onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2196F3'}
             >
-              💾 Save Times to Database
+              <i className='fas fa-save' style={{ marginRight: 8 }}></i>Save Times to Database
             </button>
 
             
@@ -788,26 +861,58 @@ const DriverDashboard = () => {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+
+            {/* Google Map Link Input */}
+            <div style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+              <label htmlFor="googleMapLink" style={{ fontSize: '0.95rem', color: '#666', fontWeight: 500, display: 'block', marginBottom: '0.3rem' }}>
+                <i className='fas fa-link' style={{ color: '#8417BA', marginRight: 4 }}></i>
+                Google Map Live Location Link <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                id="googleMapLink"
+                type="url"
+                placeholder="Paste Google Map live location link here"
+                value={googleMapLink}
+                onChange={e => setGoogleMapLink(e.target.value)}
+                onBlur={() => setLinkTouched(true)}
+                style={{
+                  width: '100%',
+                  padding: '0.7rem',
+                  borderRadius: '6px',
+                  border: linkTouched && !googleMapLink.trim() ? '1.5px solid #f44336' : '1px solid #DDD',
+                  fontSize: '0.97rem',
+                  boxSizing: 'border-box',
+                  marginBottom: linkTouched && !googleMapLink.trim() ? '0.2rem' : 0
+                }}
+                required
+              />
+              {linkTouched && !googleMapLink.trim() && (
+                <div style={{ color: '#f44336', fontSize: '0.88rem', marginTop: '0.1rem' }}>
+                  Please enter the Google Map live location link to start the trip.
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
               <button
                 type="button"
                 className="start-trip-btn"
                 onClick={handleToggleTracking}
-                disabled={isTracking}
+                disabled={isTracking || !googleMapLink.trim()}
                 style={{
                   flex: 1,
                   padding: '1rem',
                   borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: isTracking ? '#E0E0E0' : '#4CAF50',
-                  color: isTracking ? '#999' : 'white',
-                  cursor: isTracking ? 'not-allowed' : 'pointer',
+                  backgroundColor: isTracking || !googleMapLink.trim() ? '#E0E0E0' : '#4CAF50',
+                  color: isTracking || !googleMapLink.trim() ? '#999' : 'white',
+                  cursor: isTracking || !googleMapLink.trim() ? 'not-allowed' : 'pointer',
                   fontWeight: 'bold',
                   fontSize: '1rem',
                   transition: 'all 0.3s ease',
                 }}
               >
-                ▶️ START TRIP
+                <i className='fas fa-play' style={{ marginRight: 8 }}></i>START TRIP
               </button>
               <button
                 type="button"
@@ -827,13 +932,13 @@ const DriverDashboard = () => {
                   transition: 'all 0.3s ease',
                 }}
               >
-                ⏹️ END TRIP
+                <i className='fas fa-stop' style={{ marginRight: 8 }}></i>END TRIP
               </button>
             </div>
 
             {/* Shuttle Route Information */}
             <div className="shuttle-route-section" style={{ marginTop: '1.5rem' }}>
-              <h3 style={{ margin: '1rem 0 0.5rem 0', fontSize: '1.1rem', color: '#333' }}>🚐 Shuttle Route</h3>
+              <h3 style={{ margin: '1rem 0 0.5rem 0', fontSize: '1.1rem', color: '#333' }}><i className='fas fa-bus-alt' style={{ color: '#8417BA', marginRight: 8 }}></i>Shuttle Route</h3>
               <div style={{
                 padding: '1rem',
                 backgroundColor: '#FFF3E0',
@@ -842,17 +947,17 @@ const DriverDashboard = () => {
               }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                   <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>🚌 Bus Number:</h4>
+                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}><i className='fas fa-bus' style={{ color: '#8417BA', marginRight: 4 }}></i>Bus Number:</h4>
                     <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem' }}>{driverSession?.driver?.vehicle_number || busRoute.busNumber}</p>
                   </div>
                   <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>👤 Driver:</h4>
+                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}><i className='fas fa-user' style={{ color: '#8417BA', marginRight: 4 }}></i>Driver:</h4>
                     <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem' }}>{driverSession?.user?.full_name || 'Not set'}</p>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>📍 START POINT:</h4>
+                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}><i className='fas fa-map-marker-alt' style={{ color: '#D32F2F', marginRight: 4 }}></i>START POINT:</h4>
                     <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem', color: '#D32F2F' }}>
                       {startLocation || '📍 Not set in profile'}
                     </p>
@@ -861,7 +966,7 @@ const DriverDashboard = () => {
                     </p>
                   </div>
                   <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>🎯 DESTINATION:</h4>
+                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}><i className='fas fa-flag-checkered' style={{ color: '#388E3C', marginRight: 4 }}></i>DESTINATION:</h4>
                     <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem', color: '#388E3C' }}>
                       NSBM Green University
                     </p>
@@ -878,7 +983,8 @@ const DriverDashboard = () => {
                   fontSize: '0.9rem',
                   color: '#2E7D32'
                 }}>
-                  ℹ️ Students will see this shuttle available from <strong>{driverSession?.driver?.pickup_location || 'your start location'}</strong> to <strong>NSBM Green University</strong>
+                  <i className='fas fa-info-circle' style={{ color: '#8417BA', marginRight: 6 }}></i>
+                  Students will see this shuttle available from <strong>{busRoute?.busNumber || 'your start location'}</strong> to <strong>NSBM Green University</strong>
                 </div>
               </div>
             </div>
@@ -894,24 +1000,24 @@ const DriverDashboard = () => {
                 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                     <div>
-                      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>📍 FROM:</h4>
+                      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}><i className='fas fa-map-marker-alt' style={{ color: '#8417BA', marginRight: 4 }}></i>FROM:</h4>
                       <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem' }}>{routeForm.startLocation}</p>
                     </div>
                     <div>
-                      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>🎯 TO:</h4>
+                      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}><i className='fas fa-flag-checkered' style={{ color: '#388E3C', marginRight: 4 }}></i>TO:</h4>
                       <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem' }}>{routeForm.endLocation}</p>
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                     {routeForm.departureTime && (
                       <div>
-                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>🕐 DEPART:</h4>
+                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}><i className='fas fa-clock' style={{ color: '#8417BA', marginRight: 4 }}></i>DEPART:</h4>
                         <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem' }}>{routeForm.departureTime}</p>
                       </div>
                     )}
                     {routeForm.arrivalTime && (
                       <div>
-                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>🕑 ARRIVE:</h4>
+                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}><i className='fas fa-clock' style={{ color: '#8417BA', marginRight: 4 }}></i>ARRIVE:</h4>
                         <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem' }}>{routeForm.arrivalTime}</p>
                       </div>
                     )}
@@ -927,8 +1033,8 @@ const DriverDashboard = () => {
           </div>
 
           {/* Bus Status Card */}
-          <div className="status-card">
-            <h3>📍 Bus Status</h3>
+          <div className="status-card" style={{ background: '#f3e8ff', borderRadius: '14px', boxShadow: '0 2px 8px 0 rgba(132,23,186,0.04)', marginBottom: '1.5rem', padding: '1.2rem', border: '1px solid #e1bee7' }}>
+            <h3><i className='fas fa-info-circle' style={{ color: '#8417BA', marginRight: 8 }}></i>Bus Status</h3>
             <div className="status-info">
               <div className="status-item">
                 <span className="label">Occupied Seats:</span>
@@ -942,11 +1048,11 @@ const DriverDashboard = () => {
           </div>
 
           {/* Seat Layout Card */}
-          <div className="seat-card">
-            <h3>💺 Seat Layout</h3>
+          <div className="seat-card" style={{ background: '#f3e8ff', borderRadius: '14px', boxShadow: '0 2px 8px 0 rgba(132,23,186,0.04)', marginBottom: '1.5rem', padding: '1.2rem', border: '1px solid #e1bee7' }}>
+            <h3><i className='fas fa-th-large' style={{ color: '#8417BA', marginRight: 8 }}></i>Seat Layout</h3>
             <div className="bus-seats">
               {/* Front of bus */}
-              <div className="bus-front">🚍 Front</div>
+              <div className='bus-front'><i className='fas fa-arrow-up' style={{ color: '#8417BA', marginRight: 6 }}></i>Front</div>
               <div className="seats-grid">
                 {Array.from({ length: totalSeats }, (_, idx) => renderSeat(idx + 1))}
               </div>
@@ -967,9 +1073,9 @@ const DriverDashboard = () => {
         </div>
 
         {/* Right Panel - Live Location Tracking */}
-        <div className="right-panel">
-          <div className="route-card">
-            <h3>📍 Live Location & Tracking</h3>
+        <div className="right-panel" style={{ background: '#fff', borderRadius: '18px', boxShadow: '0 4px 24px 0 rgba(132,23,186,0.08)', padding: '2rem 1.5rem', margin: '0 0 2rem 1.5rem', border: '1px solid #ede7f6' }}>
+          <div className="route-card" style={{ background: '#f3e8ff', borderRadius: '14px', boxShadow: '0 2px 8px 0 rgba(132,23,186,0.04)', marginBottom: '1.5rem', padding: '1.2rem', border: '1px solid #e1bee7' }}>
+            <h3><i className='fas fa-map-marker-alt' style={{ color: '#8417BA', marginRight: 8 }}></i>Live Location & Tracking</h3>
             
             {/* View Map Button */}
             <button
@@ -1002,25 +1108,28 @@ const DriverDashboard = () => {
                 if (isTracking) (e.currentTarget as any).style.backgroundColor = '#FF6B35';
               }}
             >
-              🗺️ Open Google Maps
+              <i className='fas fa-map-marked-alt' style={{ marginRight: 8 }}></i>Open Google Maps
             </button>
 
             {!isTracking && (
               <div style={{ padding: '1rem', backgroundColor: '#FFF3CD', borderRadius: '8px', textAlign: 'center' }}>
-                <p style={{ color: '#856404', fontWeight: 'bold' }}>⚠️ Start Trip to open Google Maps</p>
+                <p style={{ color: '#856404', fontWeight: 'bold' }}><i className='fas fa-exclamation-triangle' style={{ color: '#fbc02d', marginRight: 6 }}></i>Start Trip to open Google Maps</p>
               </div>
             )}
 
             {isTracking && location && (
               <div style={{ padding: '0.8rem', backgroundColor: '#E3F2FD', borderRadius: '8px' }}>
                 <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', fontWeight: 'bold', color: '#1976D2' }}>
-                  📍 Current Location: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                  <i className='fas fa-map-marker-alt' style={{ color: '#8417BA', marginRight: 6 }}></i>
+                  Current Location: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
                 </p>
                 <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: '#333' }}>
-                  🎯 Destination: NSBM Green University
+                  <i className='fas fa-flag-checkered' style={{ color: '#388E3C', marginRight: 6 }}></i>
+                  Destination: NSBM Green University
                 </p>
                 <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: '#333' }}>
-                  📏 Accuracy: {location.accuracy?.toFixed(1)}m
+                  <i className='fas fa-ruler-horizontal' style={{ color: '#8417BA', marginRight: 6 }}></i>
+                  Accuracy: {location.accuracy?.toFixed(1)}m
                 </p>
               </div>
             )}
@@ -1033,7 +1142,7 @@ const DriverDashboard = () => {
         <div className="seat-modal-overlay" onClick={closeSeatModal}>
           <div className="seat-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>👤 Seat {selectedSeat.id} Details</h3>
+              <h3><i className='fas fa-user' style={{ color: '#8417BA', marginRight: 8 }}></i>Seat {selectedSeat.id} Details</h3>
               <button className="close-btn" onClick={closeSeatModal}>×</button>
             </div>
 
@@ -1041,15 +1150,15 @@ const DriverDashboard = () => {
               {selectedSeat.occupied ? (
                 <div className="passenger-details">
                   <div className="detail-item">
-                    <span className="label">👨‍🎓 Student Name:</span>
+                    <span className='label'><i className='fas fa-user-graduate' style={{ color: '#8417BA', marginRight: 4 }}></i>Student Name:</span>
                     <span className="value">{selectedSeat.passengerName}</span>
                   </div>
                   <div className="detail-item">
-                    <span className="label">👨‍👩‍👧 Parent Name:</span>
+                    <span className='label'><i className='fas fa-user-friends' style={{ color: '#8417BA', marginRight: 4 }}></i>Parent Name:</span>
                     <span className="value">{selectedSeat.parentName}</span>
                   </div>
                   <div className="detail-item">
-                    <span className="label">📱 Parent Phone:</span>
+                    <span className='label'><i className='fas fa-phone' style={{ color: '#8417BA', marginRight: 4 }}></i>Parent Phone:</span>
                     <span className="value">{selectedSeat.parentPhone}</span>
                   </div>
                   <div className="contact-actions">
@@ -1059,13 +1168,13 @@ const DriverDashboard = () => {
                           className="call-btn"
                           onClick={() => window.open(`tel:${selectedSeat.parentPhone}`, '_blank')}
                         >
-                          📞 Call Parent
+                          <i className='fas fa-phone-alt' style={{ marginRight: 6 }}></i>Call Parent
                         </button>
                         <button
                           className="message-btn"
                           onClick={() => window.open(`sms:${selectedSeat.parentPhone}`, '_blank')}
                         >
-                          💬 Send Message
+                          <i className='fas fa-sms' style={{ marginRight: 6 }}></i>Send Message
                         </button>
                       </>
                     )}
@@ -1073,7 +1182,7 @@ const DriverDashboard = () => {
                 </div>
               ) : (
                 <div className="empty-seat">
-                  <div className="empty-icon">🪑</div>
+                  <div className='empty-icon'><i className='fas fa-chair' style={{ color: '#8417BA', fontSize: '2rem' }}></i></div>
                   <p>This seat is currently available</p>
                   <span className="empty-note">No passenger assigned</span>
                 </div>

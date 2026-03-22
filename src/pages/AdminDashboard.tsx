@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUsers, faGraduationCap, faClipboardList, faExclamationTriangle, faBuilding, faChartBar, faBus, faChartLine, faEye, faEyeSlash, faMoneyBillWave, faTrophy, faMedal, faMapMarkerAlt, faClock } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
 
@@ -242,41 +244,41 @@ const AdminDashboard = () => {
   const [emergenciesLoading, setEmergenciesLoading] = useState(true);
   const [emergenciesError, setEmergenciesError] = useState('');
 
-  useEffect(() => {
-    const fetchEmergencies = async () => {
-      setEmergenciesLoading(true);
-      setEmergenciesError('');
-      // Join emergency_report, driver, users, and shuttle_route tables
-      const { data, error } = await supabase
-        .from('emergency_report')
-        .select(`
-          emergency_id,
-          emergency_type,
-          location_name,
-          reported_time,
-          status,
-          driver:driver_id (user_id, users:users(user_id, full_name)),
-          shuttle_route:shuttle_route_id (bus_number)
-        `)
-        .order('reported_time', { ascending: false });
-      if (error) {
-        setEmergenciesError('Failed to fetch emergency reports');
-        setEmergenciesLoading(false);
-        return;
-      }
-      // Map to EmergencyReport interface
-      const mapped = (data || []).map((e: any) => ({
-        id: e.emergency_id,
-        driverName: e.driver?.users?.full_name || 'Unknown',
-        busNumber: e.shuttle_route?.bus_number || 'Unknown',
-        emergencyType: formatEmergencyType(e.emergency_type),
-        location: e.location_name,
-        timestamp: new Date(e.reported_time).toLocaleString(),
-        status: (e.status || 'pending').toLowerCase(),
-      }));
-      setEmergencies(mapped);
+  // Move fetchEmergencies outside useEffect for reuse
+  const fetchEmergencies = async () => {
+    setEmergenciesLoading(true);
+    setEmergenciesError('');
+    const { data, error } = await supabase
+      .from('emergency_report')
+      .select(`
+        emergency_id,
+        emergency_type,
+        location_name,
+        reported_time,
+        status,
+        driver:driver_id (user_id, users:users(user_id, full_name)),
+        shuttle_route:shuttle_route_id (bus_number)
+      `)
+      .order('reported_time', { ascending: false });
+    if (error) {
+      setEmergenciesError('Failed to fetch emergency reports');
       setEmergenciesLoading(false);
-    };
+      return;
+    }
+    const mapped = (data || []).map((e: any) => ({
+      id: e.emergency_id,
+      driverName: e.driver?.users?.full_name || 'Unknown',
+      busNumber: e.shuttle_route?.bus_number || 'Unknown',
+      emergencyType: formatEmergencyType(e.emergency_type),
+      location: e.location_name,
+      timestamp: new Date(e.reported_time).toLocaleString(),
+      status: (e.status || 'pending').toLowerCase(),
+    }));
+    setEmergencies(mapped);
+    setEmergenciesLoading(false);
+  };
+
+  useEffect(() => {
     fetchEmergencies();
   }, []);
 
@@ -322,32 +324,32 @@ const AdminDashboard = () => {
   const renderOverview = () => (
     <div className="overview-content">
       <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">👥</div>
+        <div className="stat-card" title="Total Drivers">
+          <div className="stat-icon"><FontAwesomeIcon icon={faUsers} /></div>
           <div className="stat-info">
             <h3>{stats.totalDrivers}</h3>
             <p>Total Drivers</p>
             <span className="stat-badge">{stats.activeDrivers} active</span>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">🎓</div>
+        <div className="stat-card" title="Total Students">
+          <div className="stat-icon"><FontAwesomeIcon icon={faGraduationCap} /></div>
           <div className="stat-info">
             <h3>{stats.totalStudents}</h3>
             <p>Total Students</p>
             <span className="stat-badge">{stats.activeStudents} active</span>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">📋</div>
+        <div className="stat-card" title="Total Bookings">
+          <div className="stat-icon"><FontAwesomeIcon icon={faClipboardList} /></div>
           <div className="stat-info">
             <h3>{stats.totalBookings}</h3>
             <p>Total Bookings</p>
             <span className="stat-badge">This month</span>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">🚨</div>
+        <div className="stat-card" title="Pending Emergencies">
+          <div className="stat-icon"><FontAwesomeIcon icon={faExclamationTriangle} /></div>
           <div className="stat-info">
             <h3>{stats.pendingEmergencies}</h3>
             <p>Pending Emergencies</p>
@@ -355,7 +357,6 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
-
       <div className="recent-emergencies">
         <h2>Recent Emergency Reports</h2>
         <div className="emergency-cards">
@@ -510,7 +511,7 @@ const AdminDashboard = () => {
                     onClick={() => togglePasswordVisibility(student.id)}
                     title={passwordVisibility[student.id] ? 'Hide password' : 'Show password'}
                   >
-                    {passwordVisibility[student.id] ? '👁️' : '🙈'}
+                    {passwordVisibility[student.id] ? <FontAwesomeIcon icon={faEye} /> : <FontAwesomeIcon icon={faEyeSlash} />}
                   </button>
                 </div>
               </div>
@@ -667,6 +668,21 @@ const AdminDashboard = () => {
     </div>
   );
 
+  // Handler to mark emergency as resolved
+  const handleMarkResolved = async (emergencyId: number) => {
+    // Update status to 'approved' in the database
+    const { error } = await supabase
+      .from('emergency_report')
+      .update({ status: 'RESOLVED' })
+      .eq('emergency_id', emergencyId);
+    if (error) {
+      alert('Failed to update status: ' + error.message);
+      return;
+    }
+    // Refresh emergencies list without reloading the page
+    fetchEmergencies();
+  };
+
   const renderEmergencies = () => (
     <div className="emergencies-content">
       <div className="content-header">
@@ -684,18 +700,20 @@ const AdminDashboard = () => {
         {emergencies.map(emergency => (
           <div key={emergency.id} className="emergency-item">
             <div className="emergency-main">
-              <div className="emergency-icon">🚨</div>
+              <div className="emergency-icon"><FontAwesomeIcon icon={faExclamationTriangle} /></div>
               <div className="emergency-info">
                 <h3>{emergency.emergencyType}</h3>
                 <p>{emergency.driverName} • {emergency.busNumber}</p>
-                <p className="location">📍 {emergency.location}</p>
-                <p className="timestamp">🕐 {emergency.timestamp}</p>
+                <p className="location"><FontAwesomeIcon icon={faMapMarkerAlt} /> {emergency.location}</p>
+                <p className="timestamp"><FontAwesomeIcon icon={faClock} /> {emergency.timestamp}</p>
               </div>
               <span className={`status ${emergency.status}`}>{emergency.status}</span>
             </div>
             <div className="emergency-actions">
               <button className="btn-secondary">View Details</button>
-              <button className="btn-primary">Mark Resolved</button>
+              <button className="btn-primary" onClick={() => handleMarkResolved(emergency.id)} disabled={emergency.status === 'resolved' || emergency.status === 'RESOLVED'}>
+                {emergency.status === 'resolved' || emergency.status === 'RESOLVED' ? 'Resolved' : 'Mark Resolved'}
+              </button>
             </div>
           </div>
         ))}
@@ -785,9 +803,9 @@ const AdminDashboard = () => {
   }, []);
 
   const renderAnalytics = () => (
-    <div className="analytics-content">
+    <div className="analytics-content redesigned-analytics">
       <div className="analytics-header">
-        <h2>📈 Analytics Dashboard</h2>
+        <h2><FontAwesomeIcon icon={faChartLine} /> Analytics Dashboard</h2>
         <div className="analytics-filters">
           <select className="filter-select">
             <option>Last 7 days</option>
@@ -798,42 +816,61 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Key Metrics Row */}
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-icon">💰</div>
+      {/* Modern Key Metrics Row */}
+      <div className="metrics-row">
+        <div className="metric-card modern">
+          <div className="metric-icon"><FontAwesomeIcon icon={faMoneyBillWave} /></div>
           <div className="metric-info">
-            <h3>Rs. {totalRevenue.toLocaleString()}</h3>
-            <p>Total Revenue</p>
+            <span className="metric-label">Total Revenue</span>
+            <span className="metric-value">Rs. {totalRevenue.toLocaleString()}</span>
           </div>
         </div>
-        <div className="metric-card">
-          <div className="metric-icon">📈</div>
+        <div className="metric-card modern">
+          <div className="metric-icon"><FontAwesomeIcon icon={faChartLine} /></div>
           <div className="metric-info">
-            <h3>{totalTrips.toLocaleString()}</h3>
-            <p>Total Trips</p>
+            <span className="metric-label">Total Trips</span>
+            <span className="metric-value">{totalTrips.toLocaleString()}</span>
+          </div>
+        </div>
+        <div className="metric-card modern">
+          <div className="metric-icon"><FontAwesomeIcon icon={faUsers} /></div>
+          <div className="metric-info">
+            <span className="metric-label">New Students</span>
+            <span className="metric-value">+{newStudents}</span>
+          </div>
+        </div>
+        <div className="metric-card modern">
+          <div className="metric-icon"><FontAwesomeIcon icon={faGraduationCap} /></div>
+          <div className="metric-info">
+            <span className="metric-label">New Drivers</span>
+            <span className="metric-value">+{newDrivers}</span>
+          </div>
+        </div>
+        <div className="metric-card modern">
+          <div className="metric-icon"><FontAwesomeIcon icon={faChartBar} /></div>
+          <div className="metric-info">
+            <span className="metric-label">Active Users</span>
+            <span className="metric-value">{activeUsersPercent}%</span>
           </div>
         </div>
       </div>
 
-
-      {/* Charts Row */}
-      <div className="charts-grid">
-        <div className="chart-card large">
-          <h3>📊 Revenue Trends</h3>
-          <div className="revenue-chart">
+      {/* Modern Revenue Trends Chart */}
+      <div className="charts-row">
+        <div className="chart-card large modern">
+          <h3><FontAwesomeIcon icon={faChartBar} /> Revenue Trends</h3>
+          <div className="revenue-chart modern">
             <div className="chart-area">
               {monthlyRevenue.length === 0 ? (
                 <div style={{padding:'2rem',textAlign:'center',color:'#888'}}>No revenue data</div>
               ) : (
                 monthlyRevenue.map((item, idx) => {
-                  // Find max for scaling
                   const max = Math.max(...monthlyRevenue.map(m => m.value));
                   const height = max > 0 ? Math.round((item.value / max) * 90) : 0;
                   return (
                     <div
                       key={item.month}
-                      className="revenue-bar"
+                      className="revenue-bar modern"
                       style={{height: `${height}%`}}
                       data-month={item.month}
                       data-value={`Rs. ${item.value.toLocaleString()}`}
@@ -850,47 +887,42 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-
-
       </div>
 
-      {/* Bottom Row */}
-      <div className="bottom-analytics">
-        <div className="analytics-card">
-          <h3>🏆 Top Performing Drivers</h3>
-          <div className="top-drivers-grid">
+      {/* Modern Bottom Row */}
+      <div className="bottom-analytics modern">
+        <div className="analytics-card modern">
+          <h3><FontAwesomeIcon icon={faTrophy} /> Top Performing Drivers</h3>
+          <div className="top-drivers-grid modern">
             {drivers.slice(0, 5).map((driver, index) => (
-              <div key={driver.id} className="driver-rank-card">
-                <div className="driver-rank-header">
-                  <div className="driver-avatar-circle">{driver.name ? driver.name.charAt(0).toUpperCase() : '?'}</div>
-                  <div className="driver-rank-number">#{index + 1}</div>
-                  <div className="driver-rank-badge">{index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'}</div>
+              <div key={driver.id} className={`driver-rank-card modern ${index === 0 ? 'first-place' : ''}`}>
+                <div className="driver-rank-header modern">
+                  <div className="driver-avatar-circle modern">{driver.name ? driver.name.charAt(0).toUpperCase() : '?'}</div>
+                  <div className="driver-rank-number modern">#{index + 1}</div>
+                  <div className="driver-rank-badge modern">{index === 0 ? <FontAwesomeIcon icon={faTrophy} style={{color:'#FFD700'}} /> : <FontAwesomeIcon icon={faMedal} style={{color:'#C0C0C0'}} />}</div>
                 </div>
-                <div className="driver-rank-info">
-                  <span className="driver-rank-name">{driver.name}</span>
-                  <span className="driver-rank-trips">{driver.totalTrips} trips</span>
+                <div className="driver-rank-info modern">
+                  <span className="driver-rank-name modern">{driver.name}</span>
+                  <span className="driver-rank-trips modern">{driver.totalTrips} trips</span>
                 </div>
               </div>
             ))}
           </div>
         </div>
-
-
-
-        <div className="analytics-card">
-          <h3>📊 User Growth</h3>
-          <div className="growth-chart">
-            <div className="growth-metric">
-              <span className="growth-label">New Students</span>
-              <span className="growth-value">+{newStudents}</span>
+        <div className="analytics-card modern">
+          <h3><FontAwesomeIcon icon={faChartBar} /> User Growth</h3>
+          <div className="growth-chart modern">
+            <div className="growth-metric modern">
+              <span className="growth-label modern">New Students</span>
+              <span className="growth-value modern">+{newStudents}</span>
             </div>
-            <div className="growth-metric">
-              <span className="growth-label">New Drivers</span>
-              <span className="growth-value">+{newDrivers}</span>
+            <div className="growth-metric modern">
+              <span className="growth-label modern">New Drivers</span>
+              <span className="growth-value modern">+{newDrivers}</span>
             </div>
-            <div className="growth-metric">
-              <span className="growth-label">Active Users</span>
-              <span className="growth-value">{activeUsersPercent}%</span>
+            <div className="growth-metric modern">
+              <span className="growth-label modern">Active Users</span>
+              <span className="growth-value modern">{activeUsersPercent}%</span>
             </div>
           </div>
         </div>
@@ -938,49 +970,49 @@ const AdminDashboard = () => {
     <div className="admin-dashboard">
       <div className="sidebar">
         <div className="sidebar-header">
-          <h1>🏢 Admin</h1>
+          <h1><FontAwesomeIcon icon={faBuilding} /> Admin</h1>
         </div>
         <nav className="sidebar-nav">
           <button
             className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`}
             onClick={() => setActiveSection('overview')}
           >
-            <span className="nav-icon">📊</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faChartBar} /></span>
             Overview
           </button>
           <button
             className={`nav-item ${activeSection === 'drivers' ? 'active' : ''}`}
             onClick={() => setActiveSection('drivers')}
           >
-            <span className="nav-icon">👥</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faUsers} /></span>
             Drivers
           </button>
           <button
             className={`nav-item ${activeSection === 'students' ? 'active' : ''}`}
             onClick={() => setActiveSection('students')}
           >
-            <span className="nav-icon">🎓</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faGraduationCap} /></span>
             Students
           </button>
           <button
             className={`nav-item ${activeSection === 'routes' ? 'active' : ''}`}
             onClick={() => setActiveSection('routes')}
           >
-            <span className="nav-icon">🚌</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faBus} /></span>
             Shuttle Routes
           </button>
           <button
             className={`nav-item ${activeSection === 'emergencies' ? 'active' : ''}`}
             onClick={() => setActiveSection('emergencies')}
           >
-            <span className="nav-icon">🚨</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faExclamationTriangle} /></span>
             Emergencies
           </button>
           <button
             className={`nav-item ${activeSection === 'analytics' ? 'active' : ''}`}
             onClick={() => setActiveSection('analytics')}
           >
-            <span className="nav-icon">📈</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faChartLine} /></span>
             Analytics
           </button>
         </nav>
@@ -996,12 +1028,18 @@ const AdminDashboard = () => {
             {activeSection === 'analytics' && 'Analytics'}
           </h1>
           <div className="header-actions">
-            <button className="btn-secondary" onClick={() => exportAnalyticsData('csv')}>Export CSV</button>
-            <button className="btn-secondary" onClick={() => exportAnalyticsData('excel')}>Export Excel</button>
-            <button className="btn-secondary" style={{background:'#e53935',color:'#fff',border:'none'}} onClick={() => {
+            <button className="btn-pro export-csv" onClick={() => exportAnalyticsData('csv')} title="Export as CSV">
+              Export CSV
+            </button>
+            <button className="btn-pro export-excel" onClick={() => exportAnalyticsData('excel')} title="Export as Excel">
+              Export Excel
+            </button>
+            <button className="btn-pro logout" onClick={() => {
               localStorage.removeItem('adminLoggedIn');
               window.location.href = '/';
-            }}>Logout</button>
+            }} title="Logout">
+              Logout
+            </button>
           </div>
         </header>
 
@@ -1016,67 +1054,113 @@ const AdminDashboard = () => {
       </div>
 
       <style>{`
-        .top-drivers-grid {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 18px;
+        html, body, .admin-dashboard {
+          font-family: 'Inter', 'Roboto', Arial, sans-serif;
         }
-        .driver-rank-card {
-          flex: 1 1 160px;
-          min-width: 160px;
-          max-width: 220px;
-          background: #f7fafc;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(132,23,186,0.07);
-          padding: 18px 12px 14px 12px;
+        .welcome-summary-card {
+          background: linear-gradient(90deg, #f3e9fa 0%, #e6e6ff 100%);
+          border-radius: 18px;
+          box-shadow: 0 4px 18px rgba(132,23,186,0.10);
+          padding: 2.2rem 2.2rem 1.5rem 2.2rem;
+          margin: 32px 40px 0 40px;
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           align-items: center;
-          transition: box-shadow 0.2s;
+          justify-content: space-between;
+          gap: 2.5rem;
         }
-        .driver-rank-card:hover {
-          box-shadow: 0 4px 16px rgba(132,23,186,0.13);
-        }
-        .driver-rank-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 10px;
-        }
-        .driver-avatar-circle {
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #8417BA 60%, #6B1297 100%);
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.3rem;
+        .welcome-summary-left h2 {
+          margin: 0 0 0.3rem 0;
+          font-size: 2.1rem;
           font-weight: 700;
-          box-shadow: 0 1px 4px rgba(132,23,186,0.10);
+          color: #6B1297;
         }
-        .driver-rank-number {
+        .welcome-summary-left p {
+          margin: 0;
+          color: #555;
           font-size: 1.1rem;
-          font-weight: 700;
-          color: #8417BA;
         }
-        .driver-rank-badge {
-          font-size: 1.3rem;
-          margin-left: 8px;
+        .welcome-summary-stats {
+          display: flex;
+          gap: 2.2rem;
+          flex-wrap: wrap;
         }
-        .driver-rank-info {
-          text-align: center;
-        }
-        .driver-rank-name {
+        .summary-stat {
+          display: flex;
+          align-items: center;
+          gap: 0.7rem;
+          font-size: 1.15rem;
           font-weight: 600;
-          font-size: 1.05rem;
-          display: block;
-          margin-bottom: 2px;
+          color: #8417BA;
+          background: #fff;
+          border-radius: 10px;
+          box-shadow: 0 2px 8px rgba(132,23,186,0.07);
+          padding: 0.7rem 1.2rem;
+          transition: box-shadow 0.2s, transform 0.2s;
+          cursor: pointer;
         }
-        .driver-rank-trips {
-          font-size: 0.95rem;
-          color: #718096;
+        .summary-stat:hover {
+          box-shadow: 0 6px 18px rgba(132,23,186,0.18);
+          transform: translateY(-2px) scale(1.04);
+        }
+        .summary-stat svg {
+          font-size: 1.5rem;
+        }
+        /* --- Existing styles below remain unchanged, but update stat-card, btn, nav-icon --- */
+        .stat-card {
+          background: white;
+          padding: 32px 28px;
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          box-shadow: 0 4px 12px rgba(132,23,186,0.08);
+          transition: box-shadow 0.25s, transform 0.25s;
+          cursor: pointer;
+        }
+        .stat-card:hover {
+          box-shadow: 0 8px 24px rgba(132,23,186,0.16);
+          transform: translateY(-3px) scale(1.02);
+        }
+        .btn-primary {
+          background: linear-gradient(135deg, #8417BA 0%, #6B1297 100%);
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+        }
+        .btn-primary:hover {
+          background: linear-gradient(135deg, #6B1297 0%, #8417BA 100%);
+          box-shadow: 0 6px 18px rgba(132, 23, 186, 0.18);
+          transform: translateY(-2px) scale(1.04);
+        }
+        .btn-secondary {
+          background: white;
+          color: #4a5568;
+          border: 2px solid #e2e8f0;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+        }
+        .btn-secondary:hover {
+          background: #f7fafc;
+          border-color: #cbd5e0;
+          box-shadow: 0 4px 12px rgba(132,23,186,0.10);
+          transform: translateY(-2px) scale(1.03);
+        }
+        .nav-icon {
+          margin-right: 12px;
+          font-size: 1.2rem;
+          cursor: pointer;
+        }
+        .nav-icon[title]:hover {
+          color: #fff;
+          filter: drop-shadow(0 2px 8px #8417BA);
         }
                   display: flex;
                   align-items: center;
@@ -1510,11 +1594,12 @@ const AdminDashboard = () => {
           gap: 10px;
         }
 
-        .analytics-content h2 {
+        .analytics-content.redesigned-analytics h2 {
           margin-bottom: 30px;
           color: #2d3748;
-          font-size: 1.5rem;
-          font-weight: 600;
+          font-size: 1.7rem;
+          font-weight: 700;
+          letter-spacing: -1px;
         }
 
         .analytics-header {
@@ -1529,50 +1614,54 @@ const AdminDashboard = () => {
           gap: 15px;
         }
 
-        .metrics-grid {
+        .metrics-row {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
-          margin-bottom: 40px;
+          grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+          gap: 22px;
+          margin-bottom: 38px;
         }
-
-        .metric-card {
-          background: white;
-          padding: 25px;
-          border-radius: 16px;
+        .metric-card.modern {
+          background: linear-gradient(120deg, #f3e9fa 0%, #e6e6ff 100%);
+          padding: 28px 22px 22px 22px;
+          border-radius: 18px;
           display: flex;
           align-items: center;
-          gap: 20px;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.07);
-          transition: transform 0.2s ease;
+          gap: 18px;
+          box-shadow: 0 4px 16px rgba(132,23,186,0.10);
+          transition: box-shadow 0.22s, transform 0.22s;
+          border: 1.5px solid #e9e3f7;
         }
-
-        .metric-card:hover {
-          transform: translateY(-2px);
+        .metric-card.modern:hover {
+          box-shadow: 0 8px 28px rgba(132,23,186,0.16);
+          transform: translateY(-2px) scale(1.03);
         }
-
         .metric-icon {
-          font-size: 2.5rem;
+          font-size: 2.2rem;
           background: linear-gradient(135deg, #8417BA 0%, #6B1297 100%);
           border-radius: 12px;
-          width: 60px;
-          height: 60px;
+          width: 54px;
+          height: 54px;
           display: flex;
           align-items: center;
           justify-content: center;
+          color: #fff;
+          box-shadow: 0 2px 8px rgba(132,23,186,0.10);
         }
-
-        .metric-info h3 {
-          margin: 0 0 5px 0;
-          font-size: 2rem;
-          font-weight: 700;
-          color: #2d3748;
+        .metric-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
         }
-
-        .metric-info p {
-          margin: 0 0 8px 0;
-          color: #718096;
+        .metric-label {
+          color: #6B1297;
+          font-size: 1.02rem;
           font-weight: 500;
+          margin-bottom: 2px;
+        }
+        .metric-value {
+          color: #2d3748;
+          font-size: 1.35rem;
+          font-weight: 700;
         }
 
         .metric-change {
@@ -1587,32 +1676,27 @@ const AdminDashboard = () => {
           color: #22543d;
         }
 
-        .charts-grid {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 25px;
-          margin-bottom: 40px;
+        .charts-row {
+          display: flex;
+          flex-direction: row;
+          gap: 28px;
+          margin-bottom: 38px;
         }
-
-        .chart-card {
-          background: white;
-          border-radius: 16px;
-          padding: 30px;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        .chart-card.large.modern {
+          background: #fff;
+          border-radius: 18px;
+          padding: 32px 28px 28px 28px;
+          box-shadow: 0 4px 16px rgba(132,23,186,0.10);
+          flex: 1 1 0;
+          min-width: 320px;
         }
-
-        .chart-card.large {
-          grid-column: 1;
+        .chart-card.large.modern h3 {
+          margin-bottom: 18px;
+          color: #6B1297;
+          font-size: 1.18rem;
+          font-weight: 700;
         }
-
-        .chart-card h3 {
-          margin-bottom: 20px;
-          color: #2d3748;
-          font-size: 1.2rem;
-          font-weight: 600;
-        }
-
-        .revenue-chart {
+        .revenue-chart.modern {
           height: 200px;
         }
 
@@ -1702,10 +1786,118 @@ const AdminDashboard = () => {
           color: #4a5568;
         }
 
-        .bottom-analytics {
+        .bottom-analytics.modern {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-          gap: 25px;
+          gap: 28px;
+          margin-top: 18px;
+        }
+        .analytics-card.modern {
+          background: #fff;
+          border-radius: 18px;
+          box-shadow: 0 4px 16px rgba(132,23,186,0.10);
+          padding: 28px 24px 22px 24px;
+          min-width: 320px;
+        }
+        .analytics-card.modern h3 {
+          color: #8417BA;
+          font-size: 1.1rem;
+          font-weight: 700;
+          margin-bottom: 18px;
+        }
+        .top-drivers-grid.modern {
+          display: flex;
+          flex-direction: row;
+          gap: 18px;
+          flex-wrap: wrap;
+        }
+        .driver-rank-card.modern {
+          background: linear-gradient(120deg, #f3e9fa 0%, #e6e6ff 100%);
+          border-radius: 14px;
+          box-shadow: 0 2px 8px rgba(132,23,186,0.07);
+          padding: 18px 16px 14px 16px;
+          min-width: 140px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          border: 1.5px solid #e9e3f7;
+          position: relative;
+        }
+        .driver-rank-card.modern.first-place {
+          border: 2.5px solid #FFD700;
+          box-shadow: 0 4px 18px rgba(255,215,0,0.10);
+        }
+        .driver-rank-header.modern {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: 10px;
+        }
+        .driver-avatar-circle.modern {
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #8417BA 0%, #6B1297 100%);
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 1.1rem;
+        }
+        .driver-rank-number.modern {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #8417BA;
+        }
+        .driver-rank-badge.modern {
+          font-size: 1.3rem;
+        }
+        .driver-rank-info.modern {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+        }
+        .driver-rank-name.modern {
+          font-weight: 600;
+          color: #2d3748;
+          font-size: 1.02rem;
+        }
+        .driver-rank-trips.modern {
+          font-size: 0.92rem;
+          color: #718096;
+        }
+        .growth-chart.modern {
+          display: flex;
+          flex-direction: row;
+          gap: 18px;
+          justify-content: space-between;
+          align-items: stretch;
+        }
+        .growth-metric.modern {
+          flex: 1 1 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          background: #f7fafc;
+          border-radius: 10px;
+          margin: 0 2px;
+          padding: 18px 0 14px 0;
+          min-width: 100px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+          border-bottom: none;
+        }
+        .growth-label.modern {
+          font-weight: 500;
+          color: #4a5568;
+        }
+        .growth-value.modern {
+          font-weight: 700;
+          color: #2d3748;
+          font-size: 1.1rem;
         }
 
         .top-drivers {
@@ -1882,20 +2074,62 @@ const AdminDashboard = () => {
           box-shadow: 0 4px 8px rgba(132, 23, 186, 0.3);
         }
 
-        .btn-secondary {
-          background: white;
-          color: #4a5568;
-          border: 2px solid #e2e8f0;
-          padding: 10px 20px;
-          border-radius: 8px;
+        .btn-pro {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          background: linear-gradient(90deg, #f8fafd 0%, #e6e6ff 100%);
+          color: #5a189a;
+          border: 1.5px solid #e0e0f0;
+          padding: 11px 26px 11px 20px;
+          border-radius: 11px;
           font-weight: 600;
+          font-size: 1.04rem;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: box-shadow 0.18s, background 0.18s, color 0.18s, border 0.18s, transform 0.13s;
+          box-shadow: 0 2px 10px rgba(132,23,186,0.08);
+          letter-spacing: 0.01em;
+          position: relative;
+          outline: none;
         }
-
-        .btn-secondary:hover {
-          background: #f7fafc;
-          border-color: #cbd5e0;
+        /* No icon or emoji in buttons, only text */
+        .btn-pro.export-csv {
+          border-color: #b794f4;
+          background: linear-gradient(90deg, #f3e9fa 0%, #e6e6ff 100%);
+        }
+        .btn-pro.export-excel {
+          border-color: #81e6d9;
+          background: linear-gradient(90deg, #e6fffa 0%, #e6e6ff 100%);
+        }
+        .btn-pro.logout {
+          background: #e53935;
+          color: #fff;
+          border: none;
+          font-weight: 700;
+          box-shadow: 0 2px 10px rgba(229,57,53,0.10);
+          padding: 12px 32px;
+          border-radius: 12px;
+          letter-spacing: 0.02em;
+        }
+        .btn-pro:hover, .btn-pro:focus {
+          background: linear-gradient(90deg, #e6e6ff 0%, #f8fafd 100%);
+          color: #8417BA;
+          border-color: #8417BA;
+          box-shadow: 0 6px 18px rgba(132,23,186,0.13);
+          transform: translateY(-2px) scale(1.03);
+        }
+        .btn-pro.logout:hover, .btn-pro.logout:focus {
+          background: #c62828;
+          color: #fff;
+          box-shadow: 0 6px 18px rgba(229,57,53,0.18);
+          transform: translateY(-2px) scale(1.03);
+        }
+        .btn-pro.logout:active {
+          background: #b71c1c;
+          transform: scale(0.98);
+        }
+        .btn-pro:active {
+          transform: scale(0.98);
         }
 
         .btn-danger {
