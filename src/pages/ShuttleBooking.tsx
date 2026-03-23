@@ -150,7 +150,7 @@ const ShuttleBooking = () => {
         const bookingId = bookingRows[0].booking_id;
         // Insert into booking_seat for each seat
         const tripDate = new Date().toISOString().slice(0, 10);
-        await Promise.all(selectedSeats.map(seatNumber =>
+        await Promise.all(selectedSeats.map((seatNumber: number) =>
           supabase.from('booking_seat').insert([
             {
               seat_number: seatNumber,
@@ -160,7 +160,7 @@ const ShuttleBooking = () => {
             }
           ])
         ));
-      } catch (error) {
+      } catch (error: any) {
         // Log error for debugging
         if (error && typeof error === 'object') {
           console.error('Booking insert error:', error);

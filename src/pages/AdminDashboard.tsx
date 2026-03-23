@@ -711,8 +711,8 @@ const AdminDashboard = () => {
             </div>
             <div className="emergency-actions">
               <button className="btn-secondary">View Details</button>
-              <button className="btn-primary" onClick={() => handleMarkResolved(emergency.id)} disabled={emergency.status === 'resolved' || emergency.status === 'RESOLVED'}>
-                {emergency.status === 'resolved' || emergency.status === 'RESOLVED' ? 'Resolved' : 'Mark Resolved'}
+              <button className="btn-primary" onClick={() => handleMarkResolved(emergency.id)} disabled={emergency.status === 'resolved' || emergency.status === 'in_progress'}>
+                {emergency.status === 'resolved' || emergency.status === 'in_progress' ? 'Resolved' : 'Mark Resolved'}
               </button>
             </div>
           </div>
@@ -752,8 +752,8 @@ const AdminDashboard = () => {
           .sort((a, b) => {
             const [ma, ya] = a[0].split(' ');
             const [mb, yb] = b[0].split(' ');
-            const da = new Date(`20${ya}`, new Date(Date.parse(ma + ' 1, 2000')).getMonth());
-            const db = new Date(`20${yb}`, new Date(Date.parse(mb + ' 1, 2000')).getMonth());
+            const da = new Date(2000 + Number(ya), new Date(Date.parse(ma + ' 1, 2000')).getMonth());
+            const db = new Date(2000 + Number(yb), new Date(Date.parse(mb + ' 1, 2000')).getMonth());
             return da.getTime() - db.getTime();
           })
           .map(([month, value]) => ({ month, value }));

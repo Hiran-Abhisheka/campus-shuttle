@@ -76,6 +76,10 @@ const DriverProfile = () => {
           }
         }
 
+        if (!sessionData) {
+          setIsLoading(false);
+          return;
+        }
         const session = JSON.parse(sessionData);
         const userId = session.user.user_id;
 
@@ -116,9 +120,10 @@ const DriverProfile = () => {
           vehicleType: driverData?.vehicle_type || 'Bus',
           vehicleNumber: driverData?.vehicle_number || '',
           seats: driverData?.number_of_seats || 0,
+          emergencyContact: driverData?.emergency_contact || '',
+          emergencyPhone: driverData?.emergency_phone || '',
           pickupLocation: shuttleRouteData?.start_location || ''
         };
-        
         setProfileData(newProfileData);
 
         // Cache the profile data for next load
