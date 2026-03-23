@@ -1,3 +1,7 @@
+<p align="center">
+   <img src="https://i.postimg.cc/xjMxPPTX/Screenshot-2026-03-23-120710.png" alt="Campus Shuttle Site Preview" width="800" />
+</p>
+
 # Campus Shuttle — Frontend (UI)
 
 A modern React + TypeScript web app for campus shuttle management, featuring admin, driver, and student dashboards, real-time route tracking, Google Maps integration, and Firebase hosting.
