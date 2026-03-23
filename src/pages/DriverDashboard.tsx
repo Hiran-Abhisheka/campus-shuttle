@@ -49,7 +49,9 @@ const DriverDashboard = () => {
   const [googleMapLink, setGoogleMapLink] = useState('');
   const [linkTouched, setLinkTouched] = useState(false);
     // Fix: Add missing state for today's bookings
-    const [todaysBookings, setTodaysBookings] = useState<{ student_name: string; pickup_location: string }[]>([]);
+    const [todaysBookings, setTodaysBookings] = useState<{ student_id: string; student_name: string; pickup_location: string; parent_phone?: string; attended?: boolean }[]>([]);
+    const [attendanceLoading, setAttendanceLoading] = useState<string | null>(null);
+    const [attendanceError, setAttendanceError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [driverSession, setDriverSession] = useState<DriverSession | null>(null);
   const [startLocation, setStartLocation] = useState<string>('');
@@ -132,10 +134,11 @@ const DriverDashboard = () => {
           setTodaysBookings([]);
           return;
         }
-        // For each booking, fetch student name from users table
+        // For each booking, fetch student name and parent phone from users/student tables
         const bookingsWithNames = await Promise.all(
           bookings.map(async (b: any) => {
             let student_name = '';
+            let parent_phone = '';
             if (b.student_id) {
               const { data: userData, error: userError } = await supabase
                 .from('users')
@@ -145,10 +148,23 @@ const DriverDashboard = () => {
               if (!userError && userData) {
                 student_name = userData.full_name || '';
               }
+              // Get parent phone from student table
+              const { data: studentData, error: studentError } = await supabase
+                .from('student')
+                .select('parent_phone_no')
+                .eq('user_id', b.student_id)
+                .single();
+              if (!studentError && studentData) {
+                parent_phone = studentData.parent_phone_no || '';
+              }
             }
+            // Check attendance (optional: fetch from attendance table if exists)
             return {
+              student_id: b.student_id,
               student_name,
               pickup_location: b.pickup_location || '',
+              parent_phone,
+              attended: false,
             };
           })
         );
@@ -710,6 +726,9 @@ const DriverDashboard = () => {
             <i className='fas fa-calendar-check' style={{ color: '#8417BA' }}></i>
             Today's Bookings
           </h2>
+          {attendanceError && (
+            <div style={{ color: 'red', marginBottom: 8 }}>{attendanceError}</div>
+          )}
           {todaysBookings.length === 0 ? (
             <p style={{ color: '#888', fontStyle: 'italic' }}>No bookings for today.</p>
           ) : (
@@ -718,6 +737,8 @@ const DriverDashboard = () => {
                 <tr style={{ background: '#e3f2fd' }}>
                   <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Student Name</th>
                   <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Pickup Location</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600 }}>Attendance</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600 }}>Notify Parent</th>
                 </tr>
               </thead>
               <tbody>
@@ -725,6 +746,52 @@ const DriverDashboard = () => {
                   <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
                     <td style={{ padding: '0.7rem 0.75rem' }}>{b.student_name}</td>
                     <td style={{ padding: '0.7rem 0.75rem' }}>{b.pickup_location}</td>
+                    <td style={{ padding: '0.7rem 0.75rem', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!b.attended}
+                        disabled={attendanceLoading === b.student_id}
+                        onChange={async (e) => {
+                          setAttendanceLoading(b.student_id);
+                          setAttendanceError(null);
+                          try {
+                            // Save attendance to DB (add your attendance table/logic here)
+                            // Example: await supabase.from('attendance').upsert({ student_id: b.student_id, date: today, attended: e.target.checked })
+                            // For demo, just update local state
+                            setTodaysBookings(prev => prev.map((row, i) => i === idx ? { ...row, attended: e.target.checked } : row));
+                            // Auto-send SMS after marking attendance
+                            if (b.parent_phone) {
+                              // TODO: Integrate SMS API here (e.g., Twilio, etc.)
+                              // Example: await sendSms(b.parent_phone, `Your child ${b.student_name} is ${e.target.checked ? 'present' : 'absent'} today.`)
+                              alert(`(Demo) SMS sent to ${b.parent_phone}: Your child ${b.student_name} is ${e.target.checked ? 'present' : 'absent'} today.`);
+                            }
+                          } catch (err) {
+                            setAttendanceError('Failed to update attendance or send SMS.');
+                          }
+                          setAttendanceLoading(null);
+                        }}
+                      />
+                    </td>
+                    <td style={{ padding: '0.7rem 0.75rem', textAlign: 'center' }}>
+                      <button
+                        style={{ padding: '0.4rem 0.8rem', borderRadius: 6, background: '#8417BA', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.95rem' }}
+                        disabled={attendanceLoading === b.student_id || !b.parent_phone}
+                        onClick={async () => {
+                          setAttendanceLoading(b.student_id);
+                          setAttendanceError(null);
+                          try {
+                            // TODO: Integrate SMS API here (e.g., Twilio, etc.)
+                            // Example: await sendSms(b.parent_phone, `Your child ${b.student_name} is ${b.attended ? 'present' : 'absent'} today.`)
+                            alert(`(Demo) SMS sent to ${b.parent_phone}: Your child ${b.student_name} is ${b.attended ? 'present' : 'absent'} today.`);
+                          } catch (err) {
+                            setAttendanceError('Failed to send SMS.');
+                          }
+                          setAttendanceLoading(null);
+                        }}
+                      >
+                        Send SMS
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
