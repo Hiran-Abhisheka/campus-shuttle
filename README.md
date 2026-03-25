@@ -15,6 +15,16 @@ If you accidentally commit secrets, rotate them immediately and remove them from
 A modern React + TypeScript web app for campus shuttle management, featuring admin, driver, and student dashboards, real-time route tracking, Google Maps integration, and Firebase hosting.
 
 ---
+## 🎬 App Animations & Demos
+
+### Live Tracking Animation
+![Live Tracking Animation](./public/backgrounds/live-tracking-demo.gif)
+
+### Booking Flow Animation
+![Booking Animation](./public/backgrounds/booking-demo.gif)
+
+### Driver Dashboard Animation
+![Driver Dashboard Animation](./public/backgrounds/driver-dashboard-demo.gif)
 
 ## 🚀 Features
 
