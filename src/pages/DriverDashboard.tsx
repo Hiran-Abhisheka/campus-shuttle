@@ -323,10 +323,10 @@ const DriverDashboard = () => {
         setTrackingMessage('⚠️ Please enter the Google Map live location link before starting the trip.');
         return;
       }
-      // Save the link to live_location
+      // Save the link to live_location and update trip_status to 'started'
       const { error: updateError } = await supabase
         .from('shuttle_route')
-        .update({ live_location: googleMapLink.trim() })
+        .update({ live_location: googleMapLink.trim(), trip_status: 'started' })
         .eq('shuttle_route_id', routeId);
       if (updateError) {
         setTrackingMessage('⚠️ Failed to save live location link.');

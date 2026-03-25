@@ -1,3 +1,11 @@
+# Security Notice
+
+**Never commit your .env file or any secret keys to GitHub.**
+
+Sensitive credentials (API keys, service account JSON, etc.) must be kept out of version control. Only commit .env.example with placeholder values. The .gitignore is set up to block .env and secret files.
+
+If you accidentally commit secrets, rotate them immediately and remove them from your git history.
+
 <p align="center">
    <img src="https://i.postimg.cc/xjMxPPTX/Screenshot-2026-03-23-120710.png" alt="Campus Shuttle Site Preview" width="800" />
 </p>

@@ -6,6 +6,8 @@ CREATE TABLE users ( user_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, fu
 
 CREATE TABLE student ( user_id BIGINT PRIMARY KEY, university VARCHAR(100) NOT NULL, home_address VARCHAR(255) NOT NULL, parent_name VARCHAR(100) NOT NULL, parent_phone_no VARCHAR(15) NOT NULL, parent_email VARCHAR(100) NOT NULL, student_profile_photo VARCHAR(255),
 
+fcm_token VARCHAR(255),
+
 CONSTRAINT fk_student_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 
 );

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from '../supabaseClient';
+import { registerForPushNotifications } from '../fcm';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const Navbar = () => {
@@ -294,8 +296,18 @@ const Navbar = () => {
                 <h2 className="modal-title">Student Login</h2>
                 <p className="modal-subtitle">Welcome back! Please enter your details</p>
 
-                <form className="login-form" onSubmit={(e) => {
+                <form className="login-form" onSubmit={async (e) => {
                   e.preventDefault();
+                  const username = (document.getElementById('student-username') as HTMLInputElement).value;
+                  // Fetch student by username (adjust if you use email or other field)
+                  const { data: student, error } = await supabase
+                    .from('student')
+                    .select('user_id')
+                    .eq('username', username)
+                    .single();
+                  if (student && student.user_id) {
+                    await registerForPushNotifications(student.user_id);
+                  }
                   localStorage.setItem('studentLoggedIn', 'true');
                   setIsLoggedIn(true);
                   setUserType('student');

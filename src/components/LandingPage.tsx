@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
   // Remove modal state, use navigation instead
 // Firebase imports removed
 import { supabase } from '../supabaseClient';
+import { registerForPushNotifications } from '../fcm';
 import { Link, useNavigate } from 'react-router-dom';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
 
@@ -476,6 +477,9 @@ export default function LandingPage() {
         .select('*')
         .eq('user_id', userData.user_id)
         .single();
+
+      // Register for push notifications (FCM)
+      await registerForPushNotifications(userData.user_id);
 
       // 5. Store user session in localStorage
       const userSession = {
